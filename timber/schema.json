@@ -1,0 +1,904 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Official JSON schema for the Timber librarie's log events (https://github.com/timberio/log-event-json-schema)",
+  "type": "object",
+  "required": ["dt", "message"],
+  "additionalProperties": false,
+  "properties": {
+    "dt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The IOS8601 formatted datetime when the log was generated."
+    },
+    "level": {
+      "type": "string",
+      "enum": ["debug", "info", "notice", "warn", "error", "critical", "alert", "emergency"],
+      "description": "The descriptive level of the log in string format. The available options adhere to the Syslog 5424 specification."
+    },
+    "severity": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 7,
+      "description": "The numerical severity of the message represented by an integer between 0 and 7. The available options adhere to the Syslog 5424 specification."
+    },
+    "message": {
+      "type": "string",
+      "description": "The raw log event message, formatting stripped.",
+      "maxLength": 8192
+    },
+    "time_ms": {
+      "$ref": "#/definitions/time_ms"
+    },
+    "context": {
+      "type": "object",
+      "description": "Contextual metadata about the environment the event takes place in",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "custom": {
+          "type": "object",
+          "description": "An open ended object where custom context is supplied.",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": true
+          }
+        },
+        "http": {
+          "type": "object",
+          "description": "Context about the HTTP request currently being processed (if any)",
+          "required": ["method"],
+          "additionalProperties": false,
+          "properties": {
+            "host": {
+              "$ref": "#/definitions/http_host"
+            },
+            "method": {
+              "$ref": "#/definitions/http_method"
+            },
+            "path": {
+              "$ref": "#/definitions/http_path"
+            },
+            "remote_addr": {
+              "$ref": "#/definitions/http_remote_addr"
+            },
+            "request_id": {
+              "$ref": "#/definitions/http_request_id"
+            }
+          }
+        },
+        "job": {
+          "type": "object",
+          "description": "Represents a task or job execution, typically for background tasks or jobs.",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "attempt": {
+              "type": "integer",
+              "description": "The attempt number, if applicable.",
+              "minimum": 1
+            },
+            "id": {
+              "type": "string",
+              "description": "A unique identifier for the job or task.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "queue_name": {
+              "type": "string",
+              "description": "The name of the queue being processes, if applicable.",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "organization": {
+          "type": "object",
+          "description": "Represents an organization in the platform being logged. The interpretation of \"organization\" is left to the consumer.",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "A unique identifier for the organization",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "name": {
+              "type": "string",
+              "description": "A display name for the organization",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "platform": {
+          "type": "object",
+          "description": "Contextual information about the hosting platform (AWS, Google Cloud, Heroku, etc) the application is hosted.",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "heroku": {
+              "type": "object",
+              "description": "Contextual information for the Heroku platform.",
+              "required": ["dyno_type", "source"],
+              "properties": {
+                "dyno_type": {
+                  "type": "string",
+                  "description": "The dyno type for the process (web, worker, router, etc)",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "dyno_id": {
+                  "type": "integer",
+                  "description": "The dyno ID for the process.",
+                  "minimum": 1
+                },
+                "source": {
+                  "type": "string",
+                  "description": "The source of the log message. For example, Heroku can send log messages for the web.1 dyno from both within the app and Heroku itself.",
+                  "enum": ["app", "heroku"]
+                }
+              }
+            },
+            "aws_ec2": {
+              "type": "object",
+              "description": "Information about the Amazon EC2 instance",
+              "required": ["instance_id", "ami_id", "instance_type"],
+              "properties": {
+                "ami_id": {
+                  "type": "string",
+                  "description": "Amazon Machine Image (AMI) identifier that the instance was launched from",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "hostname": {
+                  "type": "string",
+                  "description": "Hostname of the instance assigned by AWS. The operating system may report a different hostname based on configuration.",
+                  "minLength": 1,
+                  "maxLength": 255
+                },
+                "instance_id": {
+                  "type": "string",
+                  "description": "The unique identifier for the EC2 instance",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "instance_type": {
+                  "type": "string",
+                  "description": "The instance type of the EC2 image (for example, `t2.small`)",
+                  "minLength": 1,
+                  "maxLength": 50
+                },
+                "public_hostname": {
+                  "type": "string",
+                  "description": "Public hostname assigned by AWS to the EC2 instance. The operating system may report a different hostname based on configuration.",
+                  "minLength": 1,
+                  "maxLength": 255
+                }
+              }
+            }
+          }
+        },
+        "release": {
+          "type": "object",
+          "description": "Contextual information on the current release",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "commit_hash": {
+              "type": "string",
+              "description": "The git commit sha for the deploy",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When the release was created, ISO8601 date time."
+            },
+            "version": {
+              "type": "string",
+              "description": "Deploy version, can be an unique string. Ex: 1.1.2 or a43fdw",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "runtime": {
+          "type": "object",
+          "description": "Represents the language runtime details.",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "application": {
+              "type": "string",
+              "description": "The current application name",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "class_name": {
+              "type": "string",
+              "description": "The current class name, if applicable.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "file": {
+              "type": "string",
+              "description": "The current file path from the root of the project.",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            "function": {
+              "type": "string",
+              "description": "The current function name, if applicable.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "line": {
+              "type": "integer",
+              "description": "The current line number with in the file.",
+              "minimum": 1
+            },
+            "module_name": {
+              "type": "string",
+              "description": "The current module name, if applicable.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "vm_pid": {
+              "type": "string",
+              "description": "The logical process ID as defined by the current language, if applicable.",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "session": {
+          "type": "object",
+          "description": "The user's current session. A session is a way to track a user without the need for authentication. For example, a browser session is generally maintained through a cookie and assigned a unique ID.",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "The unique ID of this session.",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "source": {
+          "type": "object",
+          "description": "Context about the source of the log",
+          "additionalProperties": false,
+          "properties": {
+            "file_name": {
+              "type": "string",
+              "description": "The name of the file the log was read from (e.g., \"nodejs.log\")",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "system": {
+          "type": "object",
+          "description": "Host and system level details tha the log was generated on.",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "hostname": {
+              "type": "string",
+              "description": "The system's hostname.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "ip": {
+              "type": "string",
+              "description": "The system's IP address (v4 or v6).",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "pid": {
+              "type": "integer",
+              "description": "The originating process ID as defined by the `pid` command in Unix.",
+              "minimum": 1
+            },
+            "process_name": {
+              "type": "string",
+              "description": "The originating process name.",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "user": {
+          "type": "object",
+          "description": "Represents a user in the platform being logged. The interpretation of \"user\" is left to the consumer.",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "email": {
+              "type": "string",
+              "description": "An email address for the user. This need not be unique to the user. Note that no validation is performed on this field.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "id": {
+              "type": "string",
+              "description": "A unique identifier for the user.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "meta": {
+              "type": "object",
+              "description": "Additional custom metadata you'd like to add to the user.",
+              "minProperties": 1
+            },
+            "name": {
+              "type": "string",
+              "description": "A display name for the user.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "type": {
+              "type": "string",
+              "description": "The type of user. Used in systems where there are multiple user types. This helps to denote users in the case of polymorphism.",
+              "format": "email",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "description": "A controlled representation of the event this log line represents.",
+      "maxProperties": 1,
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "channel_join": {
+          "type": "object",
+          "description": "Represents the joining of a multi-plexed websocket channel.",
+          "required": ["channel", "topic"],
+          "additionalProperties": false,
+          "properties": {
+            "channel": {
+              "type": "string",
+              "description": "The name of the channel being joined.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "topic": {
+              "type": "string",
+              "description": "The name of the channel topic being joined.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "metadata_json": {
+              "type": "string",
+              "description": "A JSON encoded string representing additional metadata. This provides insight without the overhead of creating and indexing fields.",
+              "minLength": 1,
+              "maxLength": 8192
+            }
+          }
+        },
+        "channel_receive": {
+          "type": "object",
+          "description": "Represents the receiption of an event on a multi-plexed websocket channel.",
+          "required": ["channel", "topic", "event"],
+          "additionalProperties": false,
+          "properties": {
+            "channel": {
+              "type": "string",
+              "description": "The name of the channel being joined.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "topic": {
+              "type": "string",
+              "description": "The name of the channel topic being joined.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "event": {
+              "type": "string",
+              "description": "The name of the event being received.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "metadata_json": {
+              "type": "string",
+              "description": "A JSON encoded string representing additional metadata. This provides insight without the overhead of creating and indexing fields.",
+              "minLength": 1,
+              "maxLength": 8192
+            }
+          }
+        },
+        "controller_call": {
+          "type": "object",
+          "description": "Represents the calling of a controller, typically logged immediately after the request is routed.",
+          "required": ["controller", "action"],
+          "additionalProperties": false,
+          "properties": {
+            "controller": {
+              "type": "string",
+              "description": "The name of the controller being called.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "action": {
+              "type": "string",
+              "description": "The name of the controller action being called.",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "params_json": {
+              "type": "string",
+              "description": "An encoded JSON string representing the parsed parameters being sent to the controller. This provides additional insight without the overhead of creating and indexing fields for every paramter.",
+              "minLength": 1,
+              "maxLength": 32768
+            }
+          }
+        },
+        "custom": {
+          "type": "object",
+          "description": "An open ended object used for custom event data. Only a single root key is allowed, this represents the event type and avoids type collisions in the context of the entire schema.",
+          "minProperties": 1,
+          "maxProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": true
+          }
+        },
+        "error": {
+          "type": "object",
+          "description": "Represents an error or exception.",
+          "required": ["name"],
+          "additionalProperties": false,
+          "properties": {
+            "backtrace": {
+              "type": "array",
+              "description": "An optional array of lines, representing the call stack, leading up to the error.",
+              "minItems": 1,
+              "maxItems": 20,
+              "items": {
+                "type": "object",
+                "required": ["file", "function", "line"],
+                "additionalProperties": false,
+                "properties": {
+                  "app_name": {
+                    "type": "string",
+                    "description": "Application name, if applicable. For example, erlang / elixir have multiple apps within the same umbrella project.",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "file": {
+                    "type": "string",
+                    "description": "The line file path.",
+                    "minLength": 1,
+                    "maxLength": 1024
+                  },
+                  "function": {
+                    "type": "string",
+                    "description": "The calling function name.",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "line": {
+                    "type": "integer",
+                    "description": "The calling line number.",
+                    "minimum": 1
+                  }
+                }
+              }
+            },
+            "message": {
+              "type": "string",
+              "description": "Optional message describing the error.",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "metadata_json": {
+              "type": "string",
+              "description": "A JSON encoded string representing additional metadata. This provides insight without the overhead of creating and indexing fields.",
+              "minLength": 1,
+              "maxLength": 8192
+            },
+            "name": {
+              "type": "string",
+              "description": "Required name of the error.",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        },
+        "http_request": {
+          "type": "object",
+          "description": "Represents a HTTP request, both incoming and outgoing. Note the direction field.",
+          "required": ["method"],
+          "additionalProperties": false,
+          "properties": {
+            "body": {
+              "$ref": "#/definitions/http_body"
+            },
+            "content_length": {
+              "$ref": "#/definitions/http_content_length"
+            },
+            "direction": {
+              "$ref": "#/definitions/http_direction"
+            },
+            "headers": {
+              "$ref": "#/definitions/http_headers"
+            },
+            "headers_json": {
+              "$ref": "#/definitions/http_headers_json"
+            },
+            "host": {
+              "$ref": "#/definitions/http_host"
+            },
+            "method": {
+              "$ref": "#/definitions/http_method"
+            },
+            "path": {
+              "$ref": "#/definitions/http_path"
+            },
+            "port": {
+              "$ref": "#/definitions/http_port"
+            },
+            "query_string": {
+              "$ref": "#/definitions/http_query_string"
+            },
+            "request_id": {
+              "$ref": "#/definitions/http_request_id"
+            },
+            "scheme": {
+              "$ref": "#/definitions/http_scheme"
+            },
+            "service_name": {
+              "$ref": "#/definitions/http_service_name"
+            }
+          }
+        },
+        "http_response": {
+          "type": "object",
+          "description": "Represents a HTTP response event, both outgoing and incoming. Note the direction field.",
+          "required": ["status"],
+          "additionalProperties": false,
+          "properties": {
+            "body": {
+              "$ref": "#/definitions/http_body"
+            },
+            "content_length": {
+              "$ref": "#/definitions/http_content_length"
+            },
+            "direction": {
+              "$ref": "#/definitions/http_direction"
+            },
+            "headers": {
+              "$ref": "#/definitions/http_headers"
+            },
+            "headers_json": {
+              "$ref": "#/definitions/http_headers_json"
+            },
+            "request_id": {
+              "$ref": "#/definitions/http_request_id"
+            },
+            "service_name": {
+              "$ref": "#/definitions/http_service_name"
+            },
+            "status": {
+              "$ref": "#/definitions/http_status"
+            },
+            "time_ms": {
+              "$ref": "#/definitions/time_ms"
+            },
+            "request": {
+              "type": "object",
+              "description": "The request being responded to. This couples the request data with the response event avoiding the need for joins or external data dependencies. In many cases the data must be coupled with this event because it is represented as a single event (nginx, apache web server, and other reverse proxy servers).",
+              "minProperties": 1,
+              "properties": {
+                "host": {
+                  "$ref": "#/definitions/http_host"
+                },
+                "method": {
+                  "$ref": "#/definitions/http_method"
+                },
+                "path": {
+                  "$ref": "#/definitions/http_path"
+                },
+                "scheme": {
+                  "$ref": "#/definitions/http_scheme"
+                }
+              }
+            }
+          }
+        },
+        "resource_sample": {
+          "type": "object",
+          "description": "Represents a resource usage sample for a target server, application, or both.",
+          "minProperties": 1,
+          "properties": {
+            "cpu": {
+              "type": "object",
+              "description": "A sample of the current server processor usage.",
+              "required": ["load_avg_1m"],
+              "additionalProperties": false,
+              "properties": {
+                "load_avg_1m": {
+                  "type": "number",
+                  "description": "The load average for the processor in the last 1 minute. This reflects the number of CPU tasks that are in the ready queue (i.e. waiting to be processed).",
+                  "minimum": 0
+                },
+                "load_avg_5m": {
+                  "type": "number",
+                  "description": "The load average for the processor in the last 5 minutes. This reflects the number of CPU tasks that are in the ready queue (i.e. waiting to be processed).",
+                  "minimum": 0
+                },
+                "load_avg_15m": {
+                  "type": "number",
+                  "description": "The load average for the processor in the last 10 minutes. This reflects the number of CPU tasks that are in the ready queue (i.e. waiting to be processed).",
+                  "minimum": 0
+                }
+              }
+            },
+            "cache": {
+              "type": "object",
+              "description": "A sample of cache statistics and state.",
+              "minProperties": 1,
+              "additionalProperties": false,
+              "properties": {
+                "active_connections": {
+                  "type": "integer",
+                  "description": "The number of active connections established with the database.",
+                  "minimum": 0
+                },
+                "index_cache_hit_rate": {
+                  "type": "number",
+                  "description": "The ratio of successful reads out of all read operations.",
+                  "minimum": 0
+                },
+                "evicted_keys": {
+                  "type": "integer",
+                  "description": "The number of evicted keys.",
+                  "minimum": 0
+                }
+              }
+            },
+            "database": {
+              "type": "object",
+              "description": "A sample of database statistics and state.",
+              "minProperties": 1,
+              "additionalProperties": false,
+              "properties": {
+                "db_size": {
+                  "type": "integer",
+                  "description": "The number of bytes contained in the database. This includes all table and index data on disk, including database bloat.",
+                  "minimum": 0
+                },
+                "tables": {
+                  "type": "integer",
+                  "description": "The number of tables in the database",
+                  "minimum": 0
+                },
+                "active_connections": {
+                  "type": "integer",
+                  "description": "The number of active connections established with the database.",
+                  "minimum": 0
+                },
+                "current_transaction": {
+                  "type": "string",
+                  "description": "The current transaction ID, which can be used to track writes over time.",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "index_cache_hit_rate": {
+                  "type": "number",
+                  "description": "Ratio of queries that used an index (instead of only sequential scans), rounded to five decimal points.",
+                  "minimum": 0
+                },
+                "table_cache_hit_rate": {
+                  "type": "number",
+                  "description": "Ratio of table lookups served from shared buffer cache, rounded to five decimal points.",
+                  "minimum": 0
+                },
+                "waiting_connections": {
+                  "type": "integer",
+                  "description": "Number of connections waiting on a lock to be acquired.",
+                  "minimum": 0
+                }
+              }
+            },
+            "disk": {
+              "type": "object",
+              "description": "A sample of a server's disk usage.",
+              "required": ["read_iops", "write_iops"],
+              "additionalProperties": false,
+              "properties": {
+                "read_iops": {
+                  "type": "integer",
+                  "description": "Number of read operations in I/O sizes of 16KB blocks.",
+                  "minimum": 0
+                },
+                "write_iops": {
+                  "type": "integer",
+                  "description": "Number of write operations in I/O sizes of 16KB blocks.",
+                  "minimum": 0
+                }
+              }
+            },
+            "memory": {
+              "type": "object",
+              "description": "A sample of a server's memory usage.",
+              "required": ["total_mb"],
+              "additionalProperties": false,
+              "properties": {
+                "cache_mb": {
+                  "type": "number",
+                  "description": "The portion of the memory used for disk cache.",
+                  "minimum": 0
+                },
+                "free_mb": {
+                  "type": "number",
+                  "description": "The amount of free memory availabe in megabytes.",
+                  "minimum": 0
+                },
+                "pgpgin": {
+                  "type": "number",
+                  "description": "The cumulative total of the pages read from disk. Sudden high variations on this number can indicate short duration spikes in swap usage. The other memory related metrics are point in time snapshots and can miss short spikes.",
+                  "minimum": 0
+                },
+                "pgpgout": {
+                  "type": "number",
+                  "description": "The cumulative total of the pages written to disk. Sudden high variations on this number can indicate short duration spikes in swap usage. The other memory related metrics are point in time snapshots and can miss short spikes.",
+                  "minimum": 0
+                },
+                "rss_mb": {
+                  "type": "number",
+                  "description": "The portion of the memory being used by the target application oin megabytes.",
+                  "minimum": 0
+                },
+                "swap_mb": {
+                  "type": "number",
+                  "description": "The portion of the memory stored on disk. Swap usually indicates a shortage of memory in megabytes.",
+                  "minimum": 0
+                },
+                "total_mb": {
+                  "type": "number",
+                  "description": "The sum of the rss, cache, and swap that equals the total memory being used in megabytes.",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        },
+        "sql_query": {
+          "type": "object",
+          "description": "An outgoing SQL query sent from the application.",
+          "required": ["sql", "time_ms"],
+          "additionalProperties": false,
+          "properties": {
+            "sql": {
+              "type": "string",
+              "description": "The actual SQL statement sent.",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "time_ms": {
+              "$ref": "#/definitions/time_ms"
+            }
+          }
+        },
+        "template_render": {
+          "type": "object",
+          "description": "Rendering a template to be sent to the client via the HTTP response.",
+          "required": ["name", "time_ms"],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The unique name of the template. This generally includes the path.",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            "time_ms": {
+              "$ref": "#/definitions/time_ms"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "http_body": {
+      "type": "string",
+      "description": "The body of the HTTP request / response.",
+      "minLength": 1,
+      "maxLength": 8192
+    },
+    "http_content_length": {
+      "type": "integer",
+      "description": "The value of the Content-Length header representing the size of the request in decimal number of octets.",
+      "minimum": 0
+    },
+    "http_direction": {
+      "type": "string",
+      "description": "The direction of the HTTP request and response (incoming or outgoing).",
+      "enum": ["incoming", "outgoing"]
+    },
+    "http_headers": {
+      "type": "object",
+      "description": "An object representing *select* HTTP headers that need to be searched or graphed.",
+      "minProperties": 1
+    },
+    "http_headers_json": {
+      "type": "string",
+      "description": "An encoded JSON string representing *all* HTTP headers. This is used for request inspection without the overhead of creating and indexing fields for every header.",
+      "maxLEngth": 8192
+    },
+    "http_host": {
+      "type": "string",
+      "description": "The target host of the HTTP request. This may not be the same as the real hostname of the server.",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "http_method": {
+      "type": "string",
+      "description": "The HTTP method for the request.",
+      "enum": ["CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT", "TRACE"]
+    },
+    "http_path": {
+      "type": "string",
+      "description": "The path of the HTTP request.",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "http_port": {
+      "type": "integer",
+      "description": "The target port of the HTTP request. This may be different than the port the server is listening on.",
+      "minimum": 0
+    },
+    "http_query_string": {
+      "type": "string",
+      "description": "The query parameters present on the URL.",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "http_remote_addr": {
+      "type": "string",
+      "description": "The IP address of the computer that issued the request.",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "http_request_id": {
+      "type": "string",
+      "description": "An ID that uniquely identifies the request and can be used to trace requests.",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "http_scheme": {
+      "type": "string",
+      "enum": ["http", "https"],
+      "description": "The HTTP request scheme."
+    },
+    "http_service_name": {
+      "type": "string",
+      "description": "A short label / name for the service you are sending the request to, ex: elasticsearch",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "http_status": {
+      "type": "integer",
+      "description": "The status as defined by the HTTP status codes."
+    },
+    "time_ms": {
+      "type": "number",
+      "minimum": 0,
+      "description": "The duration, in fractional milliseconds, that it took to complete this event."
+    }
+  }
+}
