@@ -7,11 +7,14 @@ api_key = '2884_4ca58cdc23d5d4cb:94e6649c9916ab5f2bf9afdaa14ef5f4b1fd254b1114fac
 logger = logging.getLogger()
 formatter = logging.Formatter('%(age)s %(username)s: %(message)s')
 logger.formatter = formatter
+handler = timber.TimberHandler(api_key)
+logger.addHandler(handler)
 clogger = timber.ContextLogger(logger, api_key)
 
 T = time.time()
-with clogger.context('user', {'name': 'peter', 'age': 24}):
+with clogger.context(user={'name': 'peter', 'age': 24}):
     clogger.critical('inside first context')
-    with clogger.context('user', {'name': 'paul'}):
+    with clogger.context(user={'name': 'paul'}, additional={'age': 100}):
         clogger.critical('second context', extra={'foo': 'bar'})
-#clogger.critical('last step %d', T)
+    clogger.critical('back to the first context')
+clogger.critical('last step %d', T)
