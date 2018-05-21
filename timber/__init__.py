@@ -1,96 +1,140 @@
 # coding: utf-8
 from __future__ import print_function, unicode_literals
-from logging import Logger, Handler, Formatter, NOTSET
-import logging
 import base64
 import json
+import logging
+import queue
 import requests
-import pdb
-from timber.schema import validate
+import time
+import time
 from datetime import datetime
+from threading import Thread
 
-from timber.helpers import _debug, ContextStack
-from timber.constants import DEFAULT_ENDPOINT
+from timber.constants import DEFAULT_ENDPOINT, DEFAULT_BUFFER_CAPACITY, DEFAULT_FLUSH_INTERVAL
+from timber.helpers import ContextStack, _debug
+from timber.schema import validate
 
 
 context = ContextStack()
-event = ContextStack()
 
 
-class TimberHandler(Handler):
-    def __init__(self, api_key,  endpoint=DEFAULT_ENDPOINT, level=NOTSET):
+class TimberHandler(logging.Handler):
+    def __init__(self, api_key, endpoint=DEFAULT_ENDPOINT, buffer_capacity=DEFAULT_BUFFER_CAPACITY, flush_interval=DEFAULT_FLUSH_INTERVAL, level=logging.NOTSET):
         super(TimberHandler, self).__init__(level=level)
         self.api_key = api_key
         self.endpoint = endpoint
+        self.queue = queue.Queue()
+        self.uploader = _make_uploader(self.endpoint, self.api_key)
+        self.buffer_capacity = buffer_capacity
+        self.flush_interval = flush_interval
+        self.flush_thread = None
+
+    def start_flush_thread(self):
+        self.flush_thread = Thread(
+            target=_flush_worker,
+            args=(self.uploader,
+                  self.queue,
+                  self.buffer_capacity,
+                  self.flush_interval)
+        )
+        self.flush_thread.daemon = True
+        self.flush_thread.start()
 
     def emit(self, record):
+        if not self.flush_thread or not self.flush_thread.is_alive():
+            self.start_flush_thread()
         payload = _create_payload(self, record)
-        # TODO: instead of uploading directly, instantiate an uploading thread
-        # and have the _upload function put all this data into a queue for
-        # later processing.
-        response = _upload(self.endpoint, self.api_key, payload)
-        # TODO: handlers shouldn't raise unless asked to do so.
-        if response.status_code != 202:
-            e = Exception(response.status_code)
-            e.response = response
-            raise e
-        _debug(response.status_code, response.content)
+        if payload is not None:
+            self.queue.put(payload)
 
 
-def _upload(endpoint, api_key, *payloads):
+def _flush_worker(upload, in_queue, buffer_capacity, flush_interval):
+    last_flush = time.time()
+    out_queue = []
+    retry_count = 0
+
+    while True:
+        if ((time.time() - last_flush >= flush_interval and len(out_queue) > 0)
+                or len(out_queue) >= buffer_capacity):
+            to_send = out_queue
+            out_queue = []
+            # TODO: check response and do exponential backoff up to 3 times
+            response = upload(*to_send)
+            _debug(response.status_code, response.content)
+            last_flush = time.time()
+        try:
+            timeout = max(flush_interval - (time.time() - last_flush), 0)
+            item = in_queue.get(block=True, timeout=timeout)
+            out_queue.append(item)
+            in_queue.task_done()
+        except queue.Empty:
+            pass
+
+
+def _make_uploader(endpoint, api_key):
     headers = {
         'Authorization': 'Basic %s' % (
             base64.encodestring(api_key).replace('\n', ''),
         ),
         'Content-Type': 'application/json',
     }
-    _debug(payloads)
-    data = json.dumps(payloads, indent=2)
-    return requests.post(endpoint, data=data, headers=headers)
+    def upload(*payloads):
+        data = json.dumps(payloads, indent=2)
+        return requests.post(endpoint, data=data, headers=headers)
+    return upload
 
 
 def _create_payload(handler, record):
+    r = record.__dict__
     payload = {}
-    record_dict = record.__dict__
 
-    payload['dt'] = datetime.fromtimestamp(record_dict['created']).isoformat()
-    payload['level'] = record_dict['levelname'].lower()
-    payload['severity'] = record_dict['levelno'] / 10
+    payload['dt'] = datetime.fromtimestamp(r['created']).isoformat()
+    payload['level'] = level = _levelname(r['levelname'])
+    if level is None:
+        return None
+
+    payload['severity'] = r['levelno'] / 10
     payload['message'] = handler.format(record)
-    # TODO:  is this what time_ms is supposed to be?
-    payload['time_ms'] = record_dict['msecs']
+
     payload['context'] = ctx = {}
+
     # Runtime context
     ctx['runtime'] = runtime = {}
-    runtime['function'] = record_dict['funcName']
-    runtime['file'] = record_dict['filename']
-    runtime['line'] = record_dict['lineno']
-    # Custo context
+    runtime['function'] = r['funcName']
+    runtime['file'] = r['filename']
+    runtime['line'] = r['lineno']
+
+    # Custom context
     if context.exists():
         ctx['custom'] = context.collapse()
-    extra = _make_extra(record)
-    if extra:
-        ctx['custom'].setdefault('extra', {}).update(extra)
-    # Custom event data
-    if event.exists():
-        payload['event'] = {'custom': event.collapse()}
 
-    # TODO: how to handle events similarly to Ruby library?
-    # https://timber.io/docs/languages/ruby/usage/custom-events/
+    events = _parse_custom_events(record)
+    if events:
+        payload['event'] = {'custom': events}
+
     error = validate(payload)
     if error is not None:
         raise error
+
     return payload
 
+def _levelname(level):
+    return {
+        'debug': 'debug',
+        'info': 'info',
+        'warning': 'warn',
+        'error': 'error',
+        'critical': 'critical',
+    }.get(level.lower(), None)
 
-def _make_extra(record):
+
+def _parse_custom_events(record):
     default_keys = { 'args', 'asctime', 'created', 'exc_info', 'exc_text',
     'filename', 'funcName', 'levelname', 'levelno', 'lineno', 'module',
     'msecs', 'message', 'msg', 'name', 'pathname', 'process', 'processName',
     'relativeCreated', 'thread', 'threadName'}
-    extra = {}
+    events = {}
     for key, val in record.__dict__.items():
-        if key  not in default_keys:
-            extra[key] = val
-    return extra
-
+        if key not in default_keys and isinstance(val, dict):
+            events[key] = val
+    return events

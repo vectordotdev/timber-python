@@ -34,4 +34,3 @@ class ContextStack(object):
 
 def _debug(*data):
     print(json.dumps(data, indent=2, sort_keys=True))
-
