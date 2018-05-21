@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 from threading import Thread
 
-from timber.constants import DEFAULT_ENDPOINT, DEFAULT_BUFFER_CAPACITY, DEFAULT_FLUSH_INTERVAL
+from timber.constants import DEFAULT_ENDPOINT, DEFAULT_BUFFER_CAPACITY, DEFAULT_FLUSH_INTERVAL, DEFAULT_RAISE_EXCEPTIONS
 from timber.helpers import ContextStack, make_context, _debug
 from timber.schema import validate
 
@@ -19,7 +19,7 @@ context = ContextStack()
 
 
 class TimberHandler(logging.Handler):
-    def __init__(self, api_key, endpoint=DEFAULT_ENDPOINT, buffer_capacity=DEFAULT_BUFFER_CAPACITY, flush_interval=DEFAULT_FLUSH_INTERVAL, context=context, level=logging.NOTSET):
+    def __init__(self, api_key, endpoint=DEFAULT_ENDPOINT, buffer_capacity=DEFAULT_BUFFER_CAPACITY, flush_interval=DEFAULT_FLUSH_INTERVAL, context=context, raise_exceptions=DEFAULT_RAISE_EXCEPTIONS, level=logging.NOTSET):
         super(TimberHandler, self).__init__(level=level)
         self.api_key = api_key
         self.endpoint = endpoint
@@ -28,6 +28,7 @@ class TimberHandler(logging.Handler):
         self.uploader = _make_uploader(self.endpoint, self.api_key)
         self.buffer_capacity = buffer_capacity
         self.flush_interval = flush_interval
+        self.raise_exceptions = raise_exceptions
         self.flush_thread = None
 
     def start_flush_thread(self):
@@ -42,11 +43,15 @@ class TimberHandler(logging.Handler):
         self.flush_thread.start()
 
     def emit(self, record):
-        if not self.flush_thread or not self.flush_thread.is_alive():
-            self.start_flush_thread()
-        payload = _create_payload(self, record)
-        if payload is not None:
-            self.queue.put(payload)
+        try:
+            if not self.flush_thread or not self.flush_thread.is_alive():
+                self.start_flush_thread()
+            payload = _create_payload(self, record)
+            if payload is not None:
+                self.queue.put(payload)
+        except Exception as e:
+            if self.raise_exceptions:
+                raise e
 
 
 def _flush_worker(upload, in_queue, buffer_capacity, flush_interval):
