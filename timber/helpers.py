@@ -32,5 +32,8 @@ class ContextStack(object):
                 x.setdefault(name, {}).update(data)
         return x
 
+def make_context(*args, **kwargs):
+    return ContextStack(*args, **kwargs)
+
 def _debug(*data):
     print(json.dumps(data, indent=2, sort_keys=True))

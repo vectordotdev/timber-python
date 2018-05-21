@@ -11,7 +11,7 @@ from datetime import datetime
 from threading import Thread
 
 from timber.constants import DEFAULT_ENDPOINT, DEFAULT_BUFFER_CAPACITY, DEFAULT_FLUSH_INTERVAL
-from timber.helpers import ContextStack, _debug
+from timber.helpers import ContextStack, make_context, _debug
 from timber.schema import validate
 
 
@@ -19,10 +19,11 @@ context = ContextStack()
 
 
 class TimberHandler(logging.Handler):
-    def __init__(self, api_key, endpoint=DEFAULT_ENDPOINT, buffer_capacity=DEFAULT_BUFFER_CAPACITY, flush_interval=DEFAULT_FLUSH_INTERVAL, level=logging.NOTSET):
+    def __init__(self, api_key, endpoint=DEFAULT_ENDPOINT, buffer_capacity=DEFAULT_BUFFER_CAPACITY, flush_interval=DEFAULT_FLUSH_INTERVAL, context=context, level=logging.NOTSET):
         super(TimberHandler, self).__init__(level=level)
         self.api_key = api_key
         self.endpoint = endpoint
+        self.context = context
         self.queue = queue.Queue()
         self.uploader = _make_uploader(self.endpoint, self.api_key)
         self.buffer_capacity = buffer_capacity
@@ -105,8 +106,8 @@ def _create_payload(handler, record):
     runtime['line'] = r['lineno']
 
     # Custom context
-    if context.exists():
-        ctx['custom'] = context.collapse()
+    if handler.context.exists():
+        ctx['custom'] = handler.context.collapse()
 
     events = _parse_custom_events(record)
     if events:
