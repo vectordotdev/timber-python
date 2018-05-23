@@ -15,7 +15,7 @@ timber_handler = timber.TimberHandler(
     api_key,
     buffer_capacity=10,
     flush_interval=2,
-    drop_extra_events=False,
+    drop_extra_events=True,
     level=logging.DEBUG,
 )
 logger.addHandler(timber_handler)
@@ -41,12 +41,9 @@ with timber.context(user={'name': 'peter', 'age': 24}):
                                              'amount': 100,
                                              'reason': 'Card expired'}})
 
-    # This is necessary to make sure that the log buffer is flushed.
-    #print('>>> about to sleep to flush events')
-    #time.sleep(timber_handler.flush_interval + 1)
-    print('>>> done')
-    for i in range(13):
-        logger.warning(i)
-    time.sleep(timber_handler.flush_interval + 1)
-    for i in range(i, i+13):
-        logger.warning(i)
+for i in range(25):
+    logger.warning(i)
+print('>>> done')
+print('dropped', timber_handler.dropcount)
+# When this thread exits, the child logger thread will flush any outstanding
+# events.

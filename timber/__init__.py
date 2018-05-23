@@ -10,27 +10,21 @@ import time
 import threading
 from datetime import datetime
 
-from timber.constants import DEFAULT_BUFFER_CAPACITY
-from timber.constants import DEFAULT_DROP_EXTRA_EVENTS
-from timber.constants import DEFAULT_ENDPOINT
-from timber.constants import DEFAULT_FLUSH_INTERVAL
-from timber.constants import DEFAULT_RAISE_EXCEPTIONS
-from timber.helpers import ContextStack
-from timber.helpers import _debug
-from timber.helpers import make_context
+from timber.constants import Default, RETRY_SCHEDULE
+from timber.helpers import make_context, _debug
 from timber.schema import validate
 
 
-context = ContextStack()
+context = Default.context
 
 
 class TimberHandler(logging.Handler):
-    def __init__(self, api_key, endpoint=DEFAULT_ENDPOINT,
-            buffer_capacity=DEFAULT_BUFFER_CAPACITY,
-            flush_interval=DEFAULT_FLUSH_INTERVAL,
-            raise_exceptions=DEFAULT_RAISE_EXCEPTIONS,
-            drop_extra_events=DEFAULT_DROP_EXTRA_EVENTS,
-            context=context,
+    def __init__(self, api_key, endpoint=Default.endpoint,
+            buffer_capacity=Default.buffer_capacity,
+            flush_interval=Default.flush_interval,
+            raise_exceptions=Default.raise_exceptions,
+            drop_extra_events=Default.drop_extra_events,
+            context=Default.context,
             level=logging.NOTSET):
         super(TimberHandler, self).__init__(level=level)
         self.api_key = api_key
@@ -43,6 +37,7 @@ class TimberHandler(logging.Handler):
         self.flush_interval = flush_interval
         self.raise_exceptions = raise_exceptions
         self.flush_thread = None
+        self.dropcount = 0
 
     def start_flush_thread(self):
         self.flush_thread = threading.Thread(
@@ -63,6 +58,7 @@ class TimberHandler(logging.Handler):
             try:
                 self.queue.put(payload, block=(not self.drop_extra_events))
             except queue.Full:
+                self.dropcount += 1
                 # Only raised when not blocking, which means that extra events
                 # should be dropped.
                 pass
@@ -71,13 +67,7 @@ class TimberHandler(logging.Handler):
                 raise e
 
 
-def _can_retry(status_code):
-    return 500 <= status_code < 600
-
-
 def _flush_worker(parent_thread, upload, in_queue, buffer_capacity, flush_interval):
-    # TODO: make this an argument or move to constant
-    retry_schedule = [1,10,60] # seconds
 
     last_flush = time.time()
     to_send = []
@@ -93,20 +83,9 @@ def _flush_worker(parent_thread, upload, in_queue, buffer_capacity, flush_interv
         # Done one-at-a-time so that once `buffer_capacity` events have been
         # taken they're guaranteed to be sent.
         try:
-            do_send = False
-            reasons = []
-            if shutdown:
-                do_send = True
-                reasons.append('shutdown')
-            if in_queue.full():
-                do_send = True
-                reasons.append('full queue')
-            if time.time() - last_flush > flush_interval:
-                do_send = True
-                reasons.append('flush interval expired')
-            if not do_send:
-                continue # To top of loop
-            to_send = []
+            if not(shutdown or in_queue.full() or
+                    time.time() - last_flush > flush_interval):
+                continue
             while len(to_send) < buffer_capacity:
                 item = in_queue.get(block=False)
                 to_send.append(item)
@@ -114,23 +93,22 @@ def _flush_worker(parent_thread, upload, in_queue, buffer_capacity, flush_interv
         except queue.Empty:
             pass
 
-        if shutdown and not to_send:
-            assert not to_send
-            assert not in_queue.qsize()
-            sys.exit(0)
-
-        _debug('sending because', reasons)
         # Send phase: takes the outstanding events (up to `buffer_capacity`
         # count) and sends them to the Timber endpoint all at once. If the
         # request fails in a way that can be retried, it is retried with an
         # exponential backoff in between attempts.
-        for delay in retry_schedule:
-            response = upload(*to_send)
-            last_flush = time.time()
-            if not _can_retry(response.status_code):
-                _debug(len(to_send), response.status_code, response.content)
-                break
-            time.sleep(delay)
+        if to_send:
+            for delay in RETRY_SCHEDULE:
+                response = upload(*to_send)
+                last_flush = time.time()
+                if not _should_retry(response.status_code):
+                    _debug(response.status_code, response.content, len(to_send))
+                    break
+                time.sleep(delay)
+            to_send = []
+        elif shutdown:
+            assert not in_queue.qsize()
+            sys.exit(0)
 
 
 def _make_uploader(endpoint, api_key):
@@ -175,6 +153,7 @@ def _create_payload(handler, record):
 
     return payload
 
+
 def _levelname(level):
     return {
         'debug': 'debug',
@@ -195,3 +174,7 @@ def _parse_custom_events(record):
         if key not in default_keys and isinstance(val, dict):
             events[key] = val
     return events
+
+
+def _should_retry(status_code):
+    return 500 <= status_code < 600
