@@ -11,21 +11,20 @@ import threading
 from datetime import datetime
 
 from timber.constants import Default, RETRY_SCHEDULE
-from timber.helpers import make_context, _debug
+from timber.helpers import make_context
 from timber.schema import validate
-
 
 context = Default.context
 
 
 class TimberHandler(logging.Handler):
     def __init__(self, api_key, endpoint=Default.endpoint,
-            buffer_capacity=Default.buffer_capacity,
-            flush_interval=Default.flush_interval,
-            raise_exceptions=Default.raise_exceptions,
-            drop_extra_events=Default.drop_extra_events,
-            context=Default.context,
-            level=logging.NOTSET):
+                 buffer_capacity=Default.buffer_capacity,
+                 flush_interval=Default.flush_interval,
+                 raise_exceptions=Default.raise_exceptions,
+                 drop_extra_events=Default.drop_extra_events,
+                 context=Default.context,
+                 level=logging.NOTSET):
         super(TimberHandler, self).__init__(level=level)
         self.api_key = api_key
         self.endpoint = endpoint
@@ -67,15 +66,15 @@ class TimberHandler(logging.Handler):
                 raise e
 
 
-def _flush_worker(parent_thread, upload, in_queue, buffer_capacity, flush_interval):
-
+def _flush_worker(parent_thread, upload, in_queue, buffer_capacity,
+                  flush_interval):
     last_flush = time.time()
     to_send = []
     shutdown = False
 
     while True:
-        # If the parent thread has exited but there are still outstanding events,
-        # attempt to send them before exiting.
+        # If the parent thread has exited but there are still outstanding
+        # events, attempt to send them before exiting.
         if not parent_thread.is_alive():
             shutdown = True
 
@@ -102,7 +101,6 @@ def _flush_worker(parent_thread, upload, in_queue, buffer_capacity, flush_interv
                 response = upload(*to_send)
                 last_flush = time.time()
                 if not _should_retry(response.status_code):
-                    _debug(response.status_code, response.content, len(to_send))
                     break
                 time.sleep(delay)
             to_send = []
@@ -118,6 +116,7 @@ def _make_uploader(endpoint, api_key):
         ),
         'Content-Type': 'application/json',
     }
+
     def upload(*payloads):
         data = json.dumps(payloads, indent=2)
         return requests.post(endpoint, data=data, headers=headers)
@@ -165,10 +164,12 @@ def _levelname(level):
 
 
 def _parse_custom_events(record):
-    default_keys = { 'args', 'asctime', 'created', 'exc_info', 'exc_text',
-    'filename', 'funcName', 'levelname', 'levelno', 'lineno', 'module',
-    'msecs', 'message', 'msg', 'name', 'pathname', 'process', 'processName',
-    'relativeCreated', 'thread', 'threadName'}
+    default_keys = {
+        'args', 'asctime', 'created', 'exc_info', 'exc_text', 'filename',
+        'funcName', 'levelname', 'levelno', 'lineno', 'module', 'msecs',
+        'message', 'msg', 'name', 'pathname', 'process', 'processName',
+        'relativeCreated', 'thread', 'threadName'
+    }
     events = {}
     for key, val in record.__dict__.items():
         if key not in default_keys and isinstance(val, dict):

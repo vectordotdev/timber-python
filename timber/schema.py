@@ -4,7 +4,10 @@ import json
 import jsonschema
 import os
 
-_schema_url = 'https://raw.githubusercontent.com/timberio/log-event-json-schema/v4.0.1/schema.json'
+_schema_url = (
+    'https://raw.githubusercontent.com/'
+    'timberio/log-event-json-schema/v4.0.1/schema.json'
+)
 _timber_root = os.path.dirname(os.path.abspath(__file__))
 _schema_path = os.path.join(_timber_root, 'schema.json')
 _schema = None
@@ -23,7 +26,7 @@ def validate(data):
     error = None
     try:
         jsonschema.validate(data, schema)
-        data['$schema'] = _schema_url # Gets added after validation?
+        data['$schema'] = _schema_url  # Gets added after validation?
     except jsonschema.exceptions.ValidationError as e:
         error = e
     return error

@@ -2,6 +2,7 @@
 from __future__ import print_function, unicode_literals
 import json
 
+
 class TimberContext(object):
     def __init__(self):
         self.extras = []
@@ -32,8 +33,10 @@ class TimberContext(object):
                 x.setdefault(name, {}).update(data)
         return x
 
+
 def make_context(*args, **kwargs):
     return TimberContext(*args, **kwargs)
+
 
 def _debug(*data):
     print(json.dumps(data, indent=2, sort_keys=True))
