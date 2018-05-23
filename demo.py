@@ -45,5 +45,8 @@ with timber.context(user={'name': 'peter', 'age': 24}):
     #print('>>> about to sleep to flush events')
     #time.sleep(timber_handler.flush_interval + 1)
     print('>>> done')
-    for i in range(28):
+    for i in range(13):
+        logger.warning(i)
+    time.sleep(timber_handler.flush_interval + 1)
+    for i in range(i, i+13):
         logger.warning(i)

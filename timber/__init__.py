@@ -76,9 +76,11 @@ def _can_retry(status_code):
 
 
 def _flush_worker(parent_thread, upload, in_queue, buffer_capacity, flush_interval):
-    last_flush = time.time()
-    out_queue = []
+    # TODO: make this an argument or move to constant
     retry_schedule = [1,10,60] # seconds
+
+    last_flush = time.time()
+    to_send = []
     shutdown = False
 
     while True:
@@ -91,45 +93,44 @@ def _flush_worker(parent_thread, upload, in_queue, buffer_capacity, flush_interv
         # Done one-at-a-time so that once `buffer_capacity` events have been
         # taken they're guaranteed to be sent.
         try:
-            # When shutting down, take whatever is left in the queue.
+            do_send = False
+            reasons = []
             if shutdown:
-                while in_queue.qsize() > 0:
-                    item = in_queue.get(block=False)
-                    out_queue.append(item)
-                    in_queue.task_done()
-            else:
-                timeout = max(flush_interval - (time.time() - last_flush), 0)
-                item = in_queue.get(block=True, timeout=timeout)
-                out_queue.append(item)
+                do_send = True
+                reasons.append('shutdown')
+            if in_queue.full():
+                do_send = True
+                reasons.append('full queue')
+            if time.time() - last_flush > flush_interval:
+                do_send = True
+                reasons.append('flush interval expired')
+            if not do_send:
+                continue # To top of loop
+            to_send = []
+            while len(to_send) < buffer_capacity:
+                item = in_queue.get(block=False)
+                to_send.append(item)
                 in_queue.task_done()
         except queue.Empty:
             pass
 
-        # Send phase: takes the outstanding events (up to `buffer_capacity`
-        # count) and sends them to the Timber endpoint all at once. If the
-        # request fails in a way that can be retried, it is retried with an
-        # exponential backoff in between attempts.
-        if (out_queue and (
-                len(out_queue) >= buffer_capacity
-                or (time.time() - last_flush >= flush_interval)
-                or shutdown)):
-            to_send = out_queue
-            out_queue = []
-            for delay in retry_schedule:
-                response = upload(*to_send)
-                last_flush = time.time()
-                if not _can_retry(response.status_code):
-                    _debug(len(to_send), response.status_code, response.content)
-                    break
-                time.sleep(delay)
-            to_send = []
-
-        if shutdown and not out_queue:
-            assert not out_queue
+        if shutdown and not to_send:
             assert not to_send
             assert not in_queue.qsize()
             sys.exit(0)
 
+        _debug('sending because', reasons)
+        # Send phase: takes the outstanding events (up to `buffer_capacity`
+        # count) and sends them to the Timber endpoint all at once. If the
+        # request fails in a way that can be retried, it is retried with an
+        # exponential backoff in between attempts.
+        for delay in retry_schedule:
+            response = upload(*to_send)
+            last_flush = time.time()
+            if not _can_retry(response.status_code):
+                _debug(len(to_send), response.status_code, response.content)
+                break
+            time.sleep(delay)
 
 
 def _make_uploader(endpoint, api_key):
