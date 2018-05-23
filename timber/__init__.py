@@ -82,6 +82,29 @@ def _flush_worker(parent_thread, upload, in_queue, buffer_capacity, flush_interv
     shutdown = False
 
     while True:
+        # If the parent thread has exited but there are still outstanding events,
+        # attempt to send them before exiting.
+        if not parent_thread.is_alive():
+            shutdown = True
+
+        # Fill phase: take events out of the queue and group them for sending.
+        # Done one-at-a-time so that once `buffer_capacity` events have been
+        # taken they're guaranteed to be sent.
+        try:
+            # When shutting down, take whatever is left in the queue.
+            if shutdown:
+                while in_queue.qsize() > 0:
+                    item = in_queue.get(block=False)
+                    out_queue.append(item)
+                    in_queue.task_done()
+            else:
+                timeout = max(flush_interval - (time.time() - last_flush), 0)
+                item = in_queue.get(block=True, timeout=timeout)
+                out_queue.append(item)
+                in_queue.task_done()
+        except queue.Empty:
+            pass
+
         # Send phase: takes the outstanding events (up to `buffer_capacity`
         # count) and sends them to the Timber endpoint all at once. If the
         # request fails in a way that can be retried, it is retried with an
@@ -99,35 +122,14 @@ def _flush_worker(parent_thread, upload, in_queue, buffer_capacity, flush_interv
                     _debug(len(to_send), response.status_code, response.content)
                     break
                 time.sleep(delay)
+            to_send = []
 
-        # If the parent thread has exited but there are still outstanding events,
-        # attempt to send them before exiting.
-        if not parent_thread.is_alive():
-            if shutdown:
-                sys.exit(0)
-            shutdown = True
-            # Empty the `in_queue` in case there are outstanding events.
-            while in_queue.qsize() > 0:
-                # qsize() > 0 is approximate, the queue might be empty and the
-                # get() might block.
-                try:
-                    item = in_queue.get(block=False)
-                except queue.Empty:
-                    pass
-                out_queue.append(item)
-                in_queue.task_done()
-            continue
+        if shutdown and not out_queue:
+            assert not out_queue
+            assert not to_send
+            assert not in_queue.qsize()
+            sys.exit(0)
 
-        # Fill phase: take events out of the queue and group them for sending.
-        # Done one-at-a-time so that once `buffer_capacity` events have been
-        # taken they're guaranteed to be sent.
-        try:
-            timeout = max(flush_interval - (time.time() - last_flush), 0)
-            item = in_queue.get(block=True, timeout=timeout)
-            out_queue.append(item)
-            in_queue.task_done()
-        except queue.Empty:
-            pass
 
 
 def _make_uploader(endpoint, api_key):
