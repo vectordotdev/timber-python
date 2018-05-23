@@ -15,7 +15,8 @@ timber_handler = timber.TimberHandler(
     api_key,
     buffer_capacity=10,
     flush_interval=2,
-    level=logging.DEBUG
+    drop_extra_events=False,
+    level=logging.DEBUG,
 )
 logger.addHandler(timber_handler)
 
@@ -32,6 +33,7 @@ with timber.context(user={'name': 'peter', 'age': 24}):
         # custom event will be created.
         logger.warning('second context', extra={'foo': 'bar'})
 
+
     # This `extra` IS sent to Timber because it is a `dict`.This will create a
     # custom 'payment_rejected' event.
     logger.error('back to the first context, inside an event',
@@ -40,6 +42,8 @@ with timber.context(user={'name': 'peter', 'age': 24}):
                                              'reason': 'Card expired'}})
 
     # This is necessary to make sure that the log buffer is flushed.
-    print('>>> about to sleep to flush events')
-    time.sleep(timber_handler.flush_interval + 1)
+    #print('>>> about to sleep to flush events')
+    #time.sleep(timber_handler.flush_interval + 1)
     print('>>> done')
+    for i in range(30):
+        logger.warning(i)
