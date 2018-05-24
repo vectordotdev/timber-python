@@ -12,7 +12,6 @@ from datetime import datetime
 
 from timber.constants import Default, RETRY_SCHEDULE
 from timber.helpers import make_context
-from timber.schema import validate
 
 context = Default.context
 
@@ -81,6 +80,12 @@ def _flush_worker(parent_thread, upload, pipe, buffer_capacity,
         # `flush_interval` seconds have passed without sending any events.
         while len(log_buffer) < buffer_capacity and timeout > 0:
             try:
+                # When not in the shutdown phase, this will block for up to
+                # `timeout` seconds waiting for a new item to be placed in
+                # `pipe`. On each loop `timeout` is set to be the remaining
+                # time in the flush period, so that exactly as soon as the
+                # timeout period is over any items in `log_buffer` will be
+                # sent.
                 item = pipe.get(block=(not shutdown), timeout=timeout)
                 log_buffer.append(item)
                 pipe.task_done()
