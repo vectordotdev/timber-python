@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# coding: utf-8
+from __future__ import print_function, unicode_literals
 import time
 import timber
 import logging
@@ -15,7 +18,8 @@ timber_handler = timber.TimberHandler(
     api_key,
     buffer_capacity=10,
     flush_interval=2,
-    drop_extra_events=True,
+    drop_extra_events=False,
+    raise_exceptions=True,
     level=logging.DEBUG,
 )
 logger.addHandler(timber_handler)
@@ -41,8 +45,11 @@ with timber.context(user={'name': 'peter', 'age': 24}):
                                              'amount': 100,
                                              'reason': 'Card expired'}})
 
-for i in range(25):
+for i in range(20):
     logger.warning(i)
+time.sleep(5)
+for i in range(5):
+    logger.critical(i + 20)
 print('>>> done')
 print('dropped', timber_handler.dropcount)
 # When this thread exits, the child logger thread will flush any outstanding
