@@ -9,10 +9,12 @@ class Uploader(object):
     def __init__(self, endpoint, api_key):
         self.endpoint = endpoint
         self.api_key = api_key
+        auth_phrase = (
+                base64.encodestring(api_key.encode('utf-8'))\
+                      .decode('utf-8')\
+                      .replace('\n', ''))
         self.headers = {
-            'Authorization': 'Basic %s' % (
-                base64.encodestring(api_key).replace('\n', ''),
-            ),
+            'Authorization': 'Basic %s' % (auth_phrase),
             'Content-Type': 'application/json',
         }
 
