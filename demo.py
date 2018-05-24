@@ -18,10 +18,11 @@ timber_handler = timber.TimberHandler(
     api_key,
     buffer_capacity=10,
     flush_interval=2,
-    drop_extra_events=False,
+    drop_extra_events=True,
     raise_exceptions=True,
     level=logging.DEBUG,
 )
+timber_handler.setFormatter(logging.Formatter('%(message)s'))
 logger.addHandler(timber_handler)
 
 
