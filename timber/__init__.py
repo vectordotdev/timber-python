@@ -65,12 +65,10 @@ class TimberHandler(logging.Handler):
             if self.raise_exceptions:
                 raise e
 
-
 def _flush_worker(parent_thread, upload, in_queue, buffer_capacity,
                   flush_interval):
     while True:
         last_flush = time.time()
-        elapsed = 0
         timeout = flush_interval
         to_send = []
         # If the parent thread has exited but there are still outstanding
@@ -81,19 +79,22 @@ def _flush_worker(parent_thread, upload, in_queue, buffer_capacity,
         # Takes up to `buffer_capacity` events out of the queue and groups them
         # for sending; may send fewer than `buffer_capacity` events if
         # `flush_interval` seconds have passed without sending any events.
-        while len(to_send) < buffer_capacity and elapsed < flush_interval:
+        while len(to_send) < buffer_capacity and timeout > 0:
             try:
                 item = in_queue.get(block=(not shutdown), timeout=timeout)
                 to_send.append(item)
                 in_queue.task_done()
             except queue.Empty:
-                # queue.Empty is only raised if `shutdown` is True; if the
-                # queue becomes empty after the parent thread has exited, then
-                # no more events will ever be put into the queue, which means
-                # we can exit this read loop immediately.
+                # queue.Empty is raised if the timeout expires before a new
+                # item is placed into the queue, or if a nonblocking `.get`
+                # finds nothing in the queue. In the former case, the flush
+                # interval has expired and the worker should flush any
+                # outstanding events. In the latter case, there are no more
+                # events to be sent and the worker should flush any outstanding
+                # events. In both cases, we break this loop and continue to the
+                # send phase.
                 break
-            elapsed = time.time() - last_flush
-            timeout = max(flush_interval - elapsed, 0)
+            timeout = _calculate_timeout(last_flush, flush_interval)
 
         # Send phase: takes the outstanding events (up to `buffer_capacity`
         # count) and sends them to the Timber endpoint all at once. If the
@@ -103,15 +104,23 @@ def _flush_worker(parent_thread, upload, in_queue, buffer_capacity,
             for delay in RETRY_SCHEDULE + (None,):
                 response = upload(*to_send)
                 if not _should_retry(response.status_code):
+                    print('-> uploaded', len(to_send), response.status_code)
                     break
                 if delay is not None:
                     time.sleep(delay)
 
         if shutdown:
-            # In the case of a shutdown, every single event should be pulled
-            # from `in_queue` and sent.
+            # In the case of a shutdown, every single event should already have
+            # been pulled from `in_queue` and sent.
             assert in_queue.qsize() == 0
             sys.exit(0)
+
+
+def _calculate_timeout(last_flush, flush_interval):
+    elapsed = time.time() - last_flush
+    timeout = max(flush_interval - elapsed, 0)
+    return timeout
+
 
 def _make_uploader(endpoint, api_key):
     headers = {
