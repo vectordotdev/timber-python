@@ -3,7 +3,6 @@ from __future__ import print_function, unicode_literals
 from datetime import datetime
 
 from timber.constants import SCHEMA_URL
-from timber.schema import validate
 
 
 def create_log_entry(handler, record):
