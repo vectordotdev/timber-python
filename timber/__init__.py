@@ -65,12 +65,12 @@ class TimberHandler(logging.Handler):
             if self.raise_exceptions:
                 raise e
 
-def _flush_worker(parent_thread, upload, in_queue, buffer_capacity,
+def _flush_worker(parent_thread, upload, pipe, buffer_capacity,
                   flush_interval):
     while True:
         last_flush = time.time()
         timeout = flush_interval
-        to_send = []
+        log_buffer = []
         # If the parent thread has exited but there are still outstanding
         # events, attempt to send them before exiting.
         shutdown = not parent_thread.is_alive()
@@ -79,11 +79,11 @@ def _flush_worker(parent_thread, upload, in_queue, buffer_capacity,
         # Takes up to `buffer_capacity` events out of the queue and groups them
         # for sending; may send fewer than `buffer_capacity` events if
         # `flush_interval` seconds have passed without sending any events.
-        while len(to_send) < buffer_capacity and timeout > 0:
+        while len(log_buffer) < buffer_capacity and timeout > 0:
             try:
-                item = in_queue.get(block=(not shutdown), timeout=timeout)
-                to_send.append(item)
-                in_queue.task_done()
+                item = pipe.get(block=(not shutdown), timeout=timeout)
+                log_buffer.append(item)
+                pipe.task_done()
             except queue.Empty:
                 # queue.Empty is raised if the timeout expires before a new
                 # item is placed into the queue, or if a nonblocking `.get`
@@ -100,19 +100,18 @@ def _flush_worker(parent_thread, upload, in_queue, buffer_capacity,
         # count) and sends them to the Timber endpoint all at once. If the
         # request fails in a way that can be retried, it is retried with an
         # exponential backoff in between attempts.
-        if to_send:
+        if log_buffer:
             for delay in RETRY_SCHEDULE + (None,):
-                response = upload(*to_send)
+                response = upload(*log_buffer)
                 if not _should_retry(response.status_code):
-                    print('-> uploaded', len(to_send), response.status_code)
                     break
                 if delay is not None:
                     time.sleep(delay)
 
         if shutdown:
             # In the case of a shutdown, every single event should already have
-            # been pulled from `in_queue` and sent.
-            assert in_queue.qsize() == 0
+            # been pulled from `pipe`, placed in `log_buffer`, and sent.
+            assert pipe.qsize() == 0
             sys.exit(0)
 
 
@@ -157,10 +156,6 @@ def _create_payload(handler, record):
     events = _parse_custom_events(record)
     if events:
         payload['event'] = {'custom': events}
-
-    error = validate(payload)
-    if error is not None:
-        raise error
 
     return payload
 
