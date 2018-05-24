@@ -44,6 +44,11 @@ with timber.context(user={'name': 'peter', 'age': 24}):
                  extra={'payment_rejected': {'customer_id': 'abcd123',
                                              'amount': 100,
                                              'reason': 'Card expired'}})
+for i in range(10):
+    logger.warning('hello %d' % i)
+print('sleeping for the flush')
+time.sleep(timber_handler.flush_interval + 1)
+print('done sleeping for the flush')
 
 for i in range(20):
     logger.warning(i)

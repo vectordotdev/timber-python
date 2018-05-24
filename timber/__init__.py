@@ -69,26 +69,29 @@ class TimberHandler(logging.Handler):
 def _flush_worker(parent_thread, upload, in_queue, buffer_capacity,
                   flush_interval):
     while True:
-        # If the parent thread has exited but there are still outstanding
-        # events, attempt to send them before exiting.
-        shutdown = not parent_thread.is_alive()
         last_flush = time.time()
         elapsed = 0
         timeout = flush_interval
         to_send = []
+        # If the parent thread has exited but there are still outstanding
+        # events, attempt to send them before exiting.
+        shutdown = not parent_thread.is_alive()
+
         # Fill phase: take events out of the queue and group them for sending.
         # Takes up to `buffer_capacity` events out of the queue and groups them
         # for sending; may send fewer than `buffer_capacity` events if
         # `flush_interval` seconds have passed without sending any events.
         while len(to_send) < buffer_capacity and elapsed < flush_interval:
             try:
-                kwargs = {'block': not shutdown}
                 item = in_queue.get(block=(not shutdown), timeout=timeout)
+                to_send.append(item)
+                in_queue.task_done()
             except queue.Empty:
+                # queue.Empty is only raised if `shutdown` is True; if the
+                # queue becomes empty after the parent thread has exited, then
+                # no more events will ever be put into the queue, which means
+                # we can exit this read loop immediately.
                 break
-            to_send.append(item)
-            in_queue.task_done()
-
             elapsed = time.time() - last_flush
             timeout = max(flush_interval - elapsed, 0)
 
@@ -99,9 +102,9 @@ def _flush_worker(parent_thread, upload, in_queue, buffer_capacity,
         if to_send:
             for delay in RETRY_SCHEDULE:
                 response = upload(*to_send)
-                if _should_retry(response.status_code):
-                    time.sleep(delay)
-                    continue
+                if not _should_retry(response.status_code):
+                    break
+                time.sleep(delay)
 
         if shutdown:
             # In the case of a shutdown, every single event should be pulled
