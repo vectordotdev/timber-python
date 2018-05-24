@@ -100,18 +100,18 @@ def _flush_worker(parent_thread, upload, in_queue, buffer_capacity,
         # request fails in a way that can be retried, it is retried with an
         # exponential backoff in between attempts.
         if to_send:
-            for delay in RETRY_SCHEDULE:
+            for delay in RETRY_SCHEDULE + (None,):
                 response = upload(*to_send)
                 if not _should_retry(response.status_code):
                     break
-                time.sleep(delay)
+                if delay is not None:
+                    time.sleep(delay)
 
         if shutdown:
             # In the case of a shutdown, every single event should be pulled
             # from `in_queue` and sent.
             assert in_queue.qsize() == 0
             sys.exit(0)
-
 
 def _make_uploader(endpoint, api_key):
     headers = {
@@ -120,7 +120,6 @@ def _make_uploader(endpoint, api_key):
         ),
         'Content-Type': 'application/json',
     }
-
     def upload(*payloads):
         data = json.dumps(payloads, indent=2)
         return requests.post(endpoint, data=data, headers=headers)

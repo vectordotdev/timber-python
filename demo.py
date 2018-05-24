@@ -45,17 +45,12 @@ with timber.context(user={'name': 'peter', 'age': 24}):
                                              'amount': 100,
                                              'reason': 'Card expired'}})
 for i in range(10):
-    logger.warning('hello %d' % i)
-print('sleeping for the flush')
-time.sleep(timber_handler.flush_interval + 1)
-print('done sleeping for the flush')
-
-for i in range(20):
-    logger.warning(i)
+    logger.warning('check %d' % i)
 time.sleep(5)
+for i in range(20):
+    logger.warning('hello %d' % i)
 for i in range(5):
-    logger.critical(i + 20)
-print('>>> done')
-print('dropped', timber_handler.dropcount)
+    logger.critical('goodbye %d' % (i + 20))
+print('>>> done, dropped', timber_handler.dropcount)
 # When this thread exits, the child logger thread will flush any outstanding
 # events.
