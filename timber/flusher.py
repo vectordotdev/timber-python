@@ -23,7 +23,7 @@ class FlushWorker(threading.Thread):
 
     def step(self):
         last_flush = time.time()
-        timeout = self.flush_interval
+        timeout = _initial_timeout(self.flush_interval)
         frame = []
         # If the parent thread has exited but there are still outstanding
         # events, attempt to send them before exiting.
@@ -69,10 +69,11 @@ class FlushWorker(threading.Thread):
                     time.sleep(delay)
 
         if shutdown:
-            # In the case of a shutdown, every single event should already have
-            # been pulled from `pipe`, placed in `frame`, and sent.
-            assert self.pipe.qsize() == 0
             sys.exit(0)
+
+
+def _initial_timeout(flush_interval):
+    return flush_interval
 
 
 def _calculate_timeout(last_flush, flush_interval):
