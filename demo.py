@@ -34,12 +34,12 @@ with timber.context(user={'name': 'peter', 'age': 24}):
     logger.critical('inside first context')
 
     with timber.context(user={'name': 'paul'}, additional={'age': 100}):
-        # This `extra` is not sent to Timber because it is not a `dict`. No
+        # This `foo` is not sent to Timber because it is not a `dict`. No
         # custom event will be created.
         logger.warning('second context', extra={'foo': 'bar'})
 
 
-    # This `extra` IS sent to Timber because it is a `dict`.This will create a
+    # This `payment_rejected` IS sent to Timber because it is a `dict`.This will create a
     # custom 'payment_rejected' event.
     logger.error('back to the first context, inside an event',
                  extra={'payment_rejected': {'customer_id': 'abcd123',
