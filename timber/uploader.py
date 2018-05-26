@@ -6,9 +6,9 @@ import requests
 
 
 class Uploader(object):
-    def __init__(self, endpoint, api_key):
-        self.endpoint = endpoint
+    def __init__(self, api_key, endpoint):
         self.api_key = api_key
+        self.endpoint = endpoint
         auth_phrase = (
                 base64.encodestring(api_key.encode('utf-8'))\
                       .decode('utf-8')\

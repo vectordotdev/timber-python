@@ -1,11 +1,11 @@
 # coding: utf-8
 from __future__ import print_function, unicode_literals
-import queue
 import sys
 import time
 import threading
 
-from timber.constants import RETRY_SCHEDULE
+from .compat import queue
+from .constants import RETRY_SCHEDULE
 
 
 class FlushWorker(threading.Thread):

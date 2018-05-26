@@ -1,12 +1,12 @@
 # coding: utf-8
 from __future__ import print_function, unicode_literals
 import logging
-import queue
 
-from timber.constants import Default
-from timber.flusher import FlushWorker
-from timber.uploader import Uploader
-from timber.log_entry import create_log_entry
+from .compat import queue
+from .constants import Default
+from .flusher import FlushWorker
+from .uploader import Uploader
+from .log_entry import create_log_entry
 
 
 class TimberHandler(logging.Handler):
@@ -22,7 +22,7 @@ class TimberHandler(logging.Handler):
         self.endpoint = endpoint
         self.context = context
         self.queue = queue.Queue(maxsize=buffer_capacity)
-        self.uploader = Uploader(self.endpoint, self.api_key)
+        self.uploader = Uploader(self.api_key, self.endpoint)
         self.drop_extra_events = drop_extra_events
         self.buffer_capacity = buffer_capacity
         self.flush_interval = flush_interval
