@@ -5,7 +5,8 @@ import time
 import threading
 
 from .compat import queue
-from .constants import RETRY_SCHEDULE
+
+RETRY_SCHEDULE = (1, 10, 60)  # seconds
 
 
 class FlushWorker(threading.Thread):

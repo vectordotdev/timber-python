@@ -2,7 +2,10 @@
 from __future__ import print_function, unicode_literals
 from datetime import datetime
 
-from timber.constants import SCHEMA_URL
+SCHEMA_URL = (
+    'https://raw.githubusercontent.com/'
+    'timberio/log-event-json-schema/v4.0.1/schema.json'
+)
 
 
 def create_log_entry(handler, record):

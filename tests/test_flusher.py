@@ -6,7 +6,7 @@ import threading
 import unittest2
 
 from timber.compat import queue
-from timber.constants import RETRY_SCHEDULE
+from timber.flusher import RETRY_SCHEDULE
 from timber.flusher import FlushWorker
 from timber.uploader import Uploader
 
@@ -143,14 +143,3 @@ class TestFlushWorker(unittest2.TestCase):
         fw.step()
         self.assertEqual(self.upload_calls, 1)
         self.assertEqual(mock_exit.call_count, 1)
-
-
-
-
-
-
-
-
-
-
-

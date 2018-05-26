@@ -3,25 +3,35 @@ from __future__ import print_function, unicode_literals
 import logging
 
 from .compat import queue
-from .constants import Default
+from .helpers import TimberContext
 from .flusher import FlushWorker
 from .uploader import Uploader
 from .log_entry import create_log_entry
 
 
+DEFAULT_FRAME_ENDPOINT = 'https://logs.timber.io/frames'
+DEFAULT_BUFFER_CAPACITY = 1000
+DEFAULT_FLUSH_INTERVAL = 30
+DEFAULT_RAISE_EXCEPTIONS = False
+DEFAULT_DROP_EXTRA_EVENTS = True
+DEFAULT_CONTEXT = TimberContext()
+
+
 class TimberHandler(logging.Handler):
-    def __init__(self, api_key, endpoint=Default.endpoint,
-                 buffer_capacity=Default.buffer_capacity,
-                 flush_interval=Default.flush_interval,
-                 raise_exceptions=Default.raise_exceptions,
-                 drop_extra_events=Default.drop_extra_events,
-                 context=Default.context,
+    def __init__(self,
+                 api_key,
+                 endpoint=DEFAULT_FRAME_ENDPOINT,
+                 buffer_capacity=DEFAULT_BUFFER_CAPACITY,
+                 flush_interval=DEFAULT_FLUSH_INTERVAL,
+                 raise_exceptions=DEFAULT_RAISE_EXCEPTIONS,
+                 drop_extra_events=DEFAULT_DROP_EXTRA_EVENTS,
+                 context=DEFAULT_CONTEXT,
                  level=logging.NOTSET):
         super(TimberHandler, self).__init__(level=level)
         self.api_key = api_key
         self.endpoint = endpoint
         self.context = context
-        self.queue = queue.Queue(maxsize=buffer_capacity)
+        self.pipe = queue.Queue(maxsize=buffer_capacity)
         self.uploader = Uploader(self.api_key, self.endpoint)
         self.drop_extra_events = drop_extra_events
         self.buffer_capacity = buffer_capacity
@@ -30,7 +40,7 @@ class TimberHandler(logging.Handler):
         self.dropcount = 0
         self.flush_thread = FlushWorker(
             self.uploader,
-            self.queue,
+            self.pipe,
             self.buffer_capacity,
             self.flush_interval
         )
@@ -39,10 +49,10 @@ class TimberHandler(logging.Handler):
     def emit(self, record):
         try:
             if not self.flush_thread.is_alive():
-                self.start_flush_thread()
+                self.flush_thread.start()
             log_entry = create_log_entry(self, record)
             try:
-                self.queue.put(log_entry, block=(not self.drop_extra_events))
+                self.pipe.put(log_entry, block=(not self.drop_extra_events))
             except queue.Full:
                 # Only raised when not blocking, which means that extra events
                 # should be dropped.
