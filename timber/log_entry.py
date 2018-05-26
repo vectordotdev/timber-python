@@ -11,7 +11,7 @@ def create_log_entry(handler, record):
     entry['$schema'] = SCHEMA_URL
     entry['dt'] = datetime.fromtimestamp(r['created']).isoformat()
     entry['level'] = level = _levelname(r['levelname'])
-    entry['severity'] = r['levelno'] / 10
+    entry['severity'] = int(r['levelno'] / 10)
     entry['message'] = handler.format(record)
     entry['context'] = ctx = {}
 

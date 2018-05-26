@@ -62,7 +62,7 @@ class FlushWorker(threading.Thread):
         # exponential backoff in between attempts.
         if frame:
             for delay in RETRY_SCHEDULE + (None,):
-                response = self.upload(*frame)
+                response = self.upload(frame)
                 if not _should_retry(response.status_code):
                     break
                 if delay is not None:

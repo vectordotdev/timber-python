@@ -1,7 +1,7 @@
 # coding: utf-8
 from __future__ import print_function, unicode_literals
 import base64
-import json
+import msgpack
 import requests
 
 
@@ -15,9 +15,9 @@ class Uploader(object):
                       .replace('\n', ''))
         self.headers = {
             'Authorization': 'Basic %s' % (auth_phrase),
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/msgpack',
         }
 
-    def __call__(self, *payloads):
-        data = json.dumps(payloads, indent=2)
+    def __call__(self, frame):
+        data = msgpack.packb(frame, use_bin_type=True)
         return requests.post(self.endpoint, data=data, headers=self.headers)
