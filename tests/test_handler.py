@@ -6,10 +6,8 @@ import threading
 import unittest2
 import logging
 
-from timber.compat import queue
 from timber.handler import TimberHandler
-from timber.flusher import FlushWorker
-from timber.uploader import Uploader
+
 
 class TestTimberHandler(unittest2.TestCase):
     api_key = 'dummy_api_key'

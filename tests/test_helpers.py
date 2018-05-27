@@ -1,10 +1,7 @@
 # coding: utf-8
 from __future__ import print_function, unicode_literals
-import msgpack
-import mock
 import unittest2
 
-import timber
 from timber import TimberContext
 
 
