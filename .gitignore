@@ -4,3 +4,5 @@ __pycache__
 .python-version
 htmlcov
 .coverage
+.tox
+*.egg-info
