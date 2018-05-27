@@ -8,7 +8,6 @@ from .flusher import FlushWorker
 from .uploader import Uploader
 from .log_entry import create_log_entry
 
-
 DEFAULT_FRAME_ENDPOINT = 'https://logs.timber.io/frames'
 DEFAULT_BUFFER_CAPACITY = 1000
 DEFAULT_FLUSH_INTERVAL = 30

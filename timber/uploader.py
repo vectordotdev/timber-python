@@ -10,9 +10,11 @@ class Uploader(object):
         self.api_key = api_key
         self.endpoint = endpoint
         auth_phrase = (
-                base64.encodestring(api_key.encode('utf-8'))\
-                      .decode('utf-8')\
-                      .replace('\n', ''))
+            base64
+            .encodestring(api_key.encode('utf-8'))
+            .decode('utf-8')
+            .replace('\n', '')
+        )
         self.headers = {
             'Authorization': 'Basic %s' % (auth_phrase),
             'Content-Type': 'application/msgpack',
