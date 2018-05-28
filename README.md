@@ -141,7 +141,7 @@ timber_handler = timber.TimberHandler(api_key='...', context=context)
 logger.addHandler(timber_handler)
 
 with context(job={'id': 123}):
-  logger.log('Background job execution started')
+  logger.critical('Background job execution started')
   # ... code here
-  logger.log('Background job execution completed')
+  logger.critical('Background job execution completed')
 ```
