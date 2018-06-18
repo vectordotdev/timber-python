@@ -2,7 +2,7 @@
 import os
 from setuptools import setup
 
-VERSION = '0.1.0'
+VERSION = '1.0.1'
 ROOT_DIR = os.path.dirname(__file__)
 
 README = open(os.path.join(ROOT_DIR, 'PYPIREADME.rst')).read()
@@ -11,6 +11,9 @@ REQUIREMENTS = [
     open(os.path.join(ROOT_DIR, 'requirements.txt')).readlines()
 ]
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
 setup(
     name='timber',
     version=VERSION,
@@ -18,7 +21,7 @@ setup(
     include_package_data=True,
     license='MIT',
     description='timber.io client API library',
-    long_description=README,
+    long_description=long_description,
     url='https://github.com/timberio/timber-python',
     download_url='https://github.com/timberio/timber-python/tarball/%s' % (
         VERSION),
