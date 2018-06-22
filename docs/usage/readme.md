@@ -1,3 +1,6 @@
+---
+description: Learn best practices for Timber on Python.
+---
 # Python Usage
 
 Beyond your traditional logging statements, Timber offers a variety of ways to improve the quality of your Python logs. We recommend reviewing these popular guides:
