@@ -7,6 +7,7 @@ pip install timber
 ```
 
 *In your entry file:*
+
 ```python
 import logging
 import timber
