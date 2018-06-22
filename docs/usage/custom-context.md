@@ -15,6 +15,7 @@ with timber.context(job={'id': 123}):
 ```
 
 Contexts nest and merge naturally:
+
 ```python
 with timber.context(job={'id': 123, 'count': 1}):
   # Sends a context {'job': {'id': 123, 'count': 1}}
