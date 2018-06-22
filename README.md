@@ -2,7 +2,9 @@
 
 Timber for Python is a `logging` handler that sends your log statements to [Timber](https://timber.io), making them [easier to search, use, and read](https://github.com/timberio/timber-ruby#get-things-done-with-your-logs). In particular, `timber` makes it easier to add [metadata and context](https://timber.io/docs/concepts/metadata-context-and-events) to your log statements.
 
-:point_right: **Timber python is under development and is in beta testing, if interested in joining, please email us at [beta@timber.io](mailto:beta@timber.io)**
+Interested in learning more? Check out [our docs](https://docs.timber.io/languages/python/).
+
+:point_right: **Timber python is under development and is in beta testing.**
 
 # Installation
 

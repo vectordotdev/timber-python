@@ -1,3 +1,6 @@
+---
+description: Learn how to set up Timber on Python.
+---
 # Python Installation
 
 1. In your shell, *run*: <small style="float: right" class="platform-alt"><a href="/platforms">prefer to integrate with your platform instead?</a></small>
