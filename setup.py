@@ -6,7 +6,6 @@ from setuptools import setup
 VERSION = '1.0.4'
 ROOT_DIR = os.path.dirname(__file__)
 
-README = open(os.path.join(ROOT_DIR, 'PYPIREADME.rst')).read()
 REQUIREMENTS = [
     line.strip() for line in
     open(os.path.join(ROOT_DIR, 'requirements.txt')).readlines()
