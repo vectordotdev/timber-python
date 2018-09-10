@@ -3,7 +3,7 @@ import os
 from setuptools import setup
 
 
-VERSION = '1.0.4'
+VERSION = '1.0.5'
 ROOT_DIR = os.path.dirname(__file__)
 
 REQUIREMENTS = [
