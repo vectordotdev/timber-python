@@ -1,27 +1,25 @@
-# Python Installation
-
+---
+description: Learn how to set up Timber on Python.
+related:
+- /app/applications/obtaining-your-api-key
+- /languages/python/troubleshooting
+---
 1. In your shell, *run*: <small style="float: right" class="platform-alt"><a href="/platforms">prefer to integrate with your platform instead?</a></small>
 
-```shell
-pip install timber
-```
+  ```shell
+  pip install timber
+  ```
 
-*In your entry file:*
-```python
-import logging
-import timber
+2. In your entry file:
 
-logger = logging.getLogger(__name__)
+  ```python
+  import logging
+  import timber
 
-timber_handler = timber.TimberHandler(api_key='...')
-logger.addHandler(timber_handler)
-```
+  logger = logging.getLogger(__name__)
 
-Continue to make logging calls like normal.
+  timber_handler = timber.TimberHandler(api_key='...')
+  logger.addHandler(timber_handler)
+  ```
 
----
-
-### Related docs
-
-1. [**Obtaining your API key**](/app/applications/obtaining-your-api-key)
-2. [**Troubleshooting**](/languages/python/troubleshooting)
+3. Continue to make logging calls like normal.

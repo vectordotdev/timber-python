@@ -2,7 +2,8 @@
 import os
 from setuptools import setup
 
-VERSION = '1.0.3'
+
+VERSION = '1.0.4'
 ROOT_DIR = os.path.dirname(__file__)
 
 README = open(os.path.join(ROOT_DIR, 'PYPIREADME.rst')).read()

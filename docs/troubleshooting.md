@@ -1,3 +1,6 @@
+---
+description: We're here to help if you're having issues.
+---
 # Python Troubleshooting
 
 *If you're having trouble don't hesitate to [contact us](mailto:support@timber.io)! We're passionate about helping our customers and providing good user experiences.*
