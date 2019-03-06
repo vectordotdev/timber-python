@@ -8,9 +8,9 @@ from .flusher import FlushWorker
 from .uploader import Uploader
 from .log_entry import create_log_entry
 
-DEFAULT_FRAME_ENDPOINT = 'https://logs.timber.io/frames'
+DEFAULT_HOST = 'https://logs.timber.io'
 DEFAULT_BUFFER_CAPACITY = 1000
-DEFAULT_FLUSH_INTERVAL = 30
+DEFAULT_FLUSH_INTERVAL = 2
 DEFAULT_RAISE_EXCEPTIONS = False
 DEFAULT_DROP_EXTRA_EVENTS = True
 DEFAULT_CONTEXT = TimberContext()
@@ -19,7 +19,8 @@ DEFAULT_CONTEXT = TimberContext()
 class TimberHandler(logging.Handler):
     def __init__(self,
                  api_key,
-                 endpoint=DEFAULT_FRAME_ENDPOINT,
+                 source_id,
+                 host=DEFAULT_HOST,
                  buffer_capacity=DEFAULT_BUFFER_CAPACITY,
                  flush_interval=DEFAULT_FLUSH_INTERVAL,
                  raise_exceptions=DEFAULT_RAISE_EXCEPTIONS,
@@ -28,10 +29,11 @@ class TimberHandler(logging.Handler):
                  level=logging.NOTSET):
         super(TimberHandler, self).__init__(level=level)
         self.api_key = api_key
-        self.endpoint = endpoint
+        self.source_id = source_id
+        self.host = host
         self.context = context
         self.pipe = queue.Queue(maxsize=buffer_capacity)
-        self.uploader = Uploader(self.api_key, self.endpoint)
+        self.uploader = Uploader(self.api_key, self.source_id, self.host)
         self.drop_extra_events = drop_extra_events
         self.buffer_capacity = buffer_capacity
         self.flush_interval = flush_interval

@@ -2,16 +2,10 @@
 from __future__ import print_function, unicode_literals
 from datetime import datetime
 
-SCHEMA_URL = (
-    'https://raw.githubusercontent.com/'
-    'timberio/log-event-json-schema/v4.0.1/schema.json'
-)
-
 
 def create_log_entry(handler, record):
     r = record.__dict__
     entry = {}
-    entry['$schema'] = SCHEMA_URL
     entry['dt'] = datetime.utcfromtimestamp(r['created']).isoformat()
     entry['level'] = level = _levelname(r['levelname'])
     entry['severity'] = int(r['levelno'] / 10)
@@ -26,11 +20,11 @@ def create_log_entry(handler, record):
 
     # Custom context
     if handler.context.exists():
-        ctx['custom'] = handler.context.collapse()
+        ctx.update(handler.context.collapse())
 
     events = _parse_custom_events(record)
     if events:
-        entry['event'] = {'custom': events}
+        entry.update(events)
 
     return entry
 

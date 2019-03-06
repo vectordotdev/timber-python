@@ -11,13 +11,14 @@ from timber.handler import TimberHandler
 
 class TestTimberHandler(unittest2.TestCase):
     api_key = 'dummy_api_key'
-    endpoint = 'dummy_endpoint'
+    source_id = 'source_id'
+    host = 'dummy_host'
 
     @mock.patch('timber.handler.FlushWorker')
     def test_handler_creates_uploader_from_args(self, MockWorker):
-        handler = TimberHandler(api_key=self.api_key, endpoint=self.endpoint)
+        handler = TimberHandler(api_key=self.api_key, source_id=self.source_id, host=self.host)
         self.assertEqual(handler.uploader.api_key, self.api_key)
-        self.assertEqual(handler.uploader.endpoint, self.endpoint)
+        self.assertEqual(handler.uploader.host, self.host)
 
     @mock.patch('timber.handler.FlushWorker')
     def test_handler_creates_pipe_from_args(self, MockWorker):
@@ -25,6 +26,7 @@ class TestTimberHandler(unittest2.TestCase):
         flush_interval = 1
         handler = TimberHandler(
             api_key=self.api_key,
+            source_id=self.source_id,
             buffer_capacity=buffer_capacity,
             flush_interval=flush_interval
         )
@@ -34,7 +36,7 @@ class TestTimberHandler(unittest2.TestCase):
     def test_handler_creates_and_starts_worker_from_args(self, MockWorker):
         buffer_capacity = 9
         flush_interval = 9
-        handler = TimberHandler(api_key=self.api_key, buffer_capacity=buffer_capacity, flush_interval=flush_interval)
+        handler = TimberHandler(api_key=self.api_key, source_id=self.source_id, buffer_capacity=buffer_capacity, flush_interval=flush_interval)
         MockWorker.assert_called_with(
             handler.uploader,
             handler.pipe,
@@ -45,7 +47,7 @@ class TestTimberHandler(unittest2.TestCase):
 
     @mock.patch('timber.handler.FlushWorker')
     def test_emit_starts_thread_if_not_alive(self, MockWorker):
-        handler = TimberHandler(api_key=self.api_key)
+        handler = TimberHandler(api_key=self.api_key, source_id=self.source_id)
         self.assertTrue(handler.flush_thread.start.call_count, 1)
         handler.flush_thread.is_alive = mock.Mock(return_value=False)
 
@@ -61,6 +63,7 @@ class TestTimberHandler(unittest2.TestCase):
         buffer_capacity = 1
         handler = TimberHandler(
             api_key=self.api_key,
+            source_id=self.source_id,
             buffer_capacity=buffer_capacity,
             drop_extra_events=True
         )
@@ -79,6 +82,7 @@ class TestTimberHandler(unittest2.TestCase):
         buffer_capacity = 1
         handler = TimberHandler(
             api_key=self.api_key,
+            source_id=self.source_id,
             buffer_capacity=buffer_capacity,
             drop_extra_events=False
         )
@@ -110,6 +114,7 @@ class TestTimberHandler(unittest2.TestCase):
         buffer_capacity = 1
         handler = TimberHandler(
             api_key=self.api_key,
+            source_id=self.source_id,
             buffer_capacity=buffer_capacity,
             raise_exceptions=True
         )

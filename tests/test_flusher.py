@@ -12,14 +12,15 @@ from timber.uploader import Uploader
 
 
 class TestFlushWorker(unittest2.TestCase):
-    endpoint = 'https://timber.io/test/endpoint'
+    host = 'https://timber.io'
     api_key = 'dummy_api_key'
+    source_id = 'dummy_source_id'
     buffer_capacity = 5
     flush_interval = 2
 
     def _setup_worker(self, uploader=None):
         pipe = queue.Queue(maxsize=self.buffer_capacity)
-        uploader = uploader or Uploader(self.api_key, self.endpoint)
+        uploader = uploader or Uploader(self.api_key, self.source_id, self.host)
         fw = FlushWorker(uploader, pipe, self.buffer_capacity, self.flush_interval)
         return pipe, uploader, fw
 
