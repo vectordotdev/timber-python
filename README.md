@@ -1,171 +1,45 @@
-# Timber - Master your Python app with structured logging
+# 🌲 Timber - Great Python Logging Made Easy
 
-Timber for Python is a `logging` handler that sends your log statements to [Timber](https://timber.io), making them [easier to search, use, and read](https://github.com/timberio/timber-ruby#get-things-done-with-your-logs). In particular, `timber` makes it easier to add [metadata and context](https://timber.io/docs/concepts/metadata-context-and-events) to your log statements.
+<p align="center">
+  <a href="https://timber.io" target="_blank" align="center">
+    <img src="https://res.cloudinary.com/timber/image/upload/v1552328675/banner.jpg" width="900">
+  </a>
+  <br>
+</p>
 
-Interested in learning more? Check out [our docs](https://docs.timber.io/languages/python/).
+[![ISC License](https://img.shields.io/badge/license-ISC-ff69b4.svg)](LICENSE.md)
+[![Pypi](https://img.shields.io/pypi/v/timber.svg)](https://pypi.python.org/pypi/timber)
+[![Python Support](https://img.shields.io/pypi/pyversions/timber.svg)](https://pypi.python.org/pypi/django-analytical)
+[![Build Status](https://travis-ci.org/timberio/timber-python.svg?branch=master)](https://travis-ci.org/timberio/timber-python)
 
-:point_right: **Timber python is under development and is in beta testing.**
+[Timber.io](https://timber.io) is a hosted service for aggregating logs across your entire stack -
+[any language](https://docs.timber.io/setup/languages),
+[any platform](https://docs.timber.io/setup/platforms),
+[any data source](https://docs.timber.io/setup/log_forwarders).
 
-# Installation
+Unlike traditional logging tools, Timber integrates with language runtimes to automatically
+capture in-app context, turning your text-based logs into rich structured events.
+Timber integrates with Python through this library. And Timber's
+[rich free-form query tools](https://docs-new.timber.io/usage/live-tailing#query-syntax) and
+[real-time tailing](https://docs-new.timber.io/usage/live-tailing), make drilling down into
+important stats easier than ever.
 
-To install the library and get started logging to Timber:
+---
 
-```bash
-pip install timber
-```
+* **[Features](https://docs.timber.io/setup/languages/python#features)**
+* **[Installation](https://docs.timber.io/setup/languages/python#installation)**
+* **[Configuration](https://docs.timber.io/setup/languages/python#configuration)**
+* **[Usage](https://docs.timber.io/setup/languages/python#usage)**
+* **[Guides](https://docs.timber.io/setup/languages/python#guides)**
+* **[Integrations](https://docs.timber.io/setup/languages/python/integrations)**
+* **[Performance](https://docs.timber.io/setup/languages/python#performance)**
 
-# Usage
+---
 
-### Basic Logging
-
-`timber` provides a `TimberHandler` that works with the built-in `logging` library. Just like any other handler,
-all that you need to do to set it up is add it to a logger:
-
-```python
-import logging
-import timber
-
-logger = logging.getLogger(__name__)
-
-timber_handler = timber.TimberHandler(api_key='...')
-logger.addHandler(timber_handler)
-```
-
-Then, make logging calls just like usual:
-
-```python
-logger.debug('Debug message')
-logger.info('Info message')
-logger.warning('Warning message')
-logger.critical('Critical message')
-logger.error('Error message')
-```
-
-### Logging Events (structured data)
-
-Log structured data by providing named events as part of the `extra` parameter to any logging call:
-
-```python
-logger.debug('Debug message', extra={
-  'payment_rejected': {
-    'customer_id': 'abcd1234',
-    'amount': 1000,
-    'reason': 'Card Expired',
-  }
-})
-```
-
-Any top-level `dict` on the `extra` argument will be sent as an event to the Timber console. All other types will be ignored.
-
-### Setting Context
-
-Add shared structured data across multiple logging statements:
-
-```python
-with timber.context(job={'id': 123}):
-  logger.info('Background job execution started')
-  # ... code here
-  logger.info('Background job execution completed')
-```
-
-Contexts nest and merge naturally:
-
-```python
-with timber.context(job={'id': 123, 'count': 1}):
-  # Sends a context {'job': {'id': 123, 'count': 1}}
-  logger.info('Background job execution started')
-  # ... code here
-  with timber.context(job={'count': 2}):
-    # Sends a context {'job': {'id': 123, 'count': 2}}
-    logger.info('Background job in progress')
-  # ... code here
-  # Sends a context {'job': {'id': 123, 'count': 1}}
-  logger.info('Background job execution completed')
-```
-
-# Configuration
-
-The `TimberHandler` takes a variety of parameters that allow for fine-grained control over its behavior.
-
-### `level`
-Like any other `logger.Handler`, the `TimberHandler` can be configured to only respond to log events of a specific level:
-
-```python
-# Only respond to events as least as important as `warning`
-timber_handler = timber.TimberHandler(api_key='...', level=logging.WARNING)
-```
-
-### `buffer_capacity` and `flush_interval`
-Timber buffers log events and sends them in the background for maximum performance. All outstanding log events are sent when the buffer is full or a certain amount of time has passed since any events were sent. To control the size of the buffer, pass the `buffer_capacity` argument:
-
-```python
-# Never allow more than 50 outstanding log events
-timber_handler = timber.TimberHandler(api_key='...', buffer_capacity=50)
-```
-
-To control the maximum amount of time between buffer flushes, pass the `flush_interval` argument:
-
-```python
-# Send any outstanding log events at most every 60 seconds
-timber_handler = timber.TimberHandler(api_key='...', flush_interval=60)
-```
-
-### `raise_exceptions`
-Logging should never break your application, which is why the `TimberHandler` suppresses all internal exceptions by default. To change this behavior:
-
-```python
-# Allow exceptions from internal log handling to propagate to the application,
-# instead of suppressing them.
-timber_handler = timber.TimberHandler(api_key='...', raise_exceptions=True)
-```
-
-### `drop_extra_events`
-As soon as the internal log event buffer is full, Timber flushes all of the events to the server, but while that occurs any incoming log events are dropped by default. To make your application block in this case to ensure that all log statements are sent to Timber:
-
-```python
-# Make log statements block until the internal log event buffer is no longer full.
-timber_handler = timber.TimberHandler(api_key='...', drop_extra_events=False)
-```
-
-### `context`
-By default all `TimberHandler` instances use the same context object (`timber.context`), but if you'd like
-to use multiple loggers and multiple handlers, each with a different context, it is possible to explicitly
-create and pass your own:
-
-```python
-import logging
-import timber
-
-logger = logging.getLogger(__name__)
-
-context = timber.TimberContext()
-timber_handler = timber.TimberHandler(api_key='...', context=context)
-logger.addHandler(timber_handler)
-
-with context(job={'id': 123}):
-  logger.critical('Background job execution started')
-  # ... code here
-  logger.critical('Background job execution completed')
-```
-
-# Testing
-
-1. Install the packages required for development and testing:
-
-```bash
-pip install -r requirements.txt
-pip install -r test-requirements.txt
-```
-
-2. Run the tests:
-
-```bash
-nosetests
-```
-
-To see test coverage, run the following and then open `./htmlcov/index.html` in your browser:
-
-```bash
-nosetests --with-coverage --cover-branches --cover-package=timber tests
-coverage html --include='timber*'
-```
+<p align="center">
+<a href="https://timber.io">Timber</a> &bull;
+<a href="https://docs.timber.io">Docs</a> &bull;
+<a href="https://timber.io/pricing">Pricing</a> &bull;
+<a href="https://timber.io/terms">Security</a> &bull;
+<a href="https://timber.io/privacy">Compliance</a>
+</p>
