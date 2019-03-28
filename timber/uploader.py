@@ -10,14 +10,8 @@ class Uploader(object):
         self.api_key = api_key
         self.source_id = source_id
         self.host = host
-        auth_phrase = (
-            base64
-            .encodestring(api_key.encode('utf-8'))
-            .decode('utf-8')
-            .replace('\n', '')
-        )
         self.headers = {
-            'Authorization': 'Basic %s' % (auth_phrase),
+            'Authorization': 'Bearer %s' % api_key,
             'Content-Type': 'application/msgpack',
         }
 
