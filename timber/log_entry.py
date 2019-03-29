@@ -9,7 +9,7 @@ def create_log_entry(handler, record):
     entry['dt'] = datetime.utcfromtimestamp(r['created']).isoformat()
     entry['level'] = level = _levelname(r['levelname'])
     entry['severity'] = int(r['levelno'] / 10)
-    entry['message'] = record.message
+    entry['message'] = handler.format(record)
     entry['context'] = ctx = {}
 
     # Runtime context
