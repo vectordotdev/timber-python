@@ -31,7 +31,7 @@ important stats easier than ever.
 * **[Configuration](https://docs.timber.io/setup/languages/python#configuration)**
 * **[Usage](https://docs.timber.io/setup/languages/python#usage)**
 * **[Guides](https://docs.timber.io/setup/languages/python#guides)**
-* **[Integrations](https://docs.timber.io/setup/languages/python/integrations)**
+* **[Automatic Context](https://docs.timber.io/setup/languages/python#automatic-context)**
 * **[Performance](https://docs.timber.io/setup/languages/python#performance)**
 
 ---
