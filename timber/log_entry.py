@@ -9,7 +9,7 @@ def create_log_entry(handler, record):
     entry['dt'] = datetime.utcfromtimestamp(r['created']).isoformat()
     entry['level'] = level = _levelname(r['levelname'])
     entry['severity'] = int(r['levelno'] / 10)
-    entry['message'] = handler.format(record)
+    entry['message'] = record.message
     entry['context'] = ctx = {}
 
     # Runtime context
@@ -17,6 +17,14 @@ def create_log_entry(handler, record):
     runtime['function'] = r['funcName']
     runtime['file'] = r['filename']
     runtime['line'] = r['lineno']
+    runtime['thread_id'] = r['thread']
+    runtime['thread_name'] = r['threadName']
+    runtime['logger_name'] = r['name']
+
+    # Runtime context
+    ctx['system'] = system = {}
+    system['pid'] = r['process']
+    system['process_name'] = r['processName']
 
     # Custom context
     if handler.context.exists():
