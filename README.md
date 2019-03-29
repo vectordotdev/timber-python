@@ -26,7 +26,18 @@ important stats easier than ever.
 
 ---
 
-* **[Features](https://docs.timber.io/setup/languages/python#features)**
+### Features
+
+* Simple integration. Integrates with the Python `logging` library.
+* Support for structured logging and events.
+* Support for context.
+* Automatically captures useful context.
+* Performant, light weight, with a thoughtful design.
+
+---
+
+### Get Started
+
 * **[Installation](https://docs.timber.io/setup/languages/python#installation)**
 * **[Configuration](https://docs.timber.io/setup/languages/python#configuration)**
 * **[Usage](https://docs.timber.io/setup/languages/python#usage)**
