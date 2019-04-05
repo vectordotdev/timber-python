@@ -30,7 +30,7 @@ class TestTimberHandler(unittest2.TestCase):
             buffer_capacity=buffer_capacity,
             flush_interval=flush_interval
         )
-        self.assertEqual(handler.pipe.maxsize, buffer_capacity)
+        self.assertEqual(handler.pipe._maxsize, buffer_capacity)
 
     @mock.patch('timber.handler.FlushWorker')
     def test_handler_creates_and_starts_worker_from_args(self, MockWorker):
@@ -74,7 +74,9 @@ class TestTimberHandler(unittest2.TestCase):
         logger.critical('hello')
         logger.critical('goodbye')
 
-        self.assertEqual(handler.pipe.qsize(), 1)
+        log_entry = handler.pipe.get()
+        self.assertEqual(log_entry['message'], 'hello')
+        self.assertTrue(handler.pipe.empty())
         self.assertEqual(handler.dropcount, 1)
 
     @mock.patch('timber.handler.FlushWorker')
@@ -90,7 +92,7 @@ class TestTimberHandler(unittest2.TestCase):
         def consumer(q):
             while True:
                 if q.full():
-                    while q.qsize() > 0:
+                    while not q.empty():
                         _ = q.get(block=True)
                 time.sleep(.2)
 

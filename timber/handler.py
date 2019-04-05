@@ -1,6 +1,7 @@
 # coding: utf-8
 from __future__ import print_function, unicode_literals
 import logging
+import multiprocessing
 
 from .compat import queue
 from .helpers import TimberContext
@@ -32,7 +33,7 @@ class TimberHandler(logging.Handler):
         self.source_id = source_id
         self.host = host
         self.context = context
-        self.pipe = queue.Queue(maxsize=buffer_capacity)
+        self.pipe = multiprocessing.JoinableQueue(maxsize=buffer_capacity)
         self.uploader = Uploader(self.api_key, self.source_id, self.host)
         self.drop_extra_events = drop_extra_events
         self.buffer_capacity = buffer_capacity
@@ -45,11 +46,15 @@ class TimberHandler(logging.Handler):
             self.buffer_capacity,
             self.flush_interval
         )
-        self.flush_thread.start()
+        if self._is_main_process():
+            self.flush_thread.start()
+
+    def _is_main_process(self):
+        return multiprocessing.current_process()._parent_pid == None
 
     def emit(self, record):
         try:
-            if not self.flush_thread.is_alive():
+            if self._is_main_process() and not self.flush_thread.is_alive():
                 self.flush_thread.start()
             log_entry = create_log_entry(self, record)
             try:
