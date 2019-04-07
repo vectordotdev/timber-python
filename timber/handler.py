@@ -4,17 +4,16 @@ import logging
 import multiprocessing
 
 from .compat import queue
-from .helpers import TimberContext
+from .helpers import DEFAULT_CONTEXT
 from .flusher import FlushWorker
 from .uploader import Uploader
-from .log_entry import create_log_entry
+from .frame import create_frame
 
 DEFAULT_HOST = 'https://logs.timber.io'
 DEFAULT_BUFFER_CAPACITY = 1000
 DEFAULT_FLUSH_INTERVAL = 2
 DEFAULT_RAISE_EXCEPTIONS = False
 DEFAULT_DROP_EXTRA_EVENTS = True
-DEFAULT_CONTEXT = TimberContext()
 
 
 class TimberHandler(logging.Handler):
@@ -56,9 +55,10 @@ class TimberHandler(logging.Handler):
         try:
             if self._is_main_process() and not self.flush_thread.is_alive():
                 self.flush_thread.start()
-            log_entry = create_log_entry(self, record)
+            message = self.format(record)
+            frame = create_frame(record, message, self.context)
             try:
-                self.pipe.put(log_entry, block=(not self.drop_extra_events))
+                self.pipe.put(frame, block=(not self.drop_extra_events))
             except queue.Full:
                 # Only raised when not blocking, which means that extra events
                 # should be dropped.
