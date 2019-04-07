@@ -17,5 +17,9 @@ class TimberFormatter(logging.Formatter):
         self.json_encoder = json_encoder
 
     def format(self, record):
-        frame = create_frame(record, record.getMessage(), self.context)
+        # Because the formatter does not have an underlying format string for
+        # which `extra` may be used to substitute arguments (see
+        # https://docs.python.org/2/library/logging.html#logging.debug ), we
+        # augment the log frame with all of the entries in extra.
+        frame = create_frame(record, record.getMessage(), self.context, include_all_extra=True)
         return json.dumps(frame, default=self.json_default, cls=self.json_encoder)

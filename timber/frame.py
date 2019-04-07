@@ -4,7 +4,7 @@ import msgpack
 from datetime import datetime
 
 
-def create_frame(record, message, context):
+def create_frame(record, message, context, include_all_extra=False):
     r = record.__dict__
     frame = {}
     frame['dt'] = datetime.utcfromtimestamp(r['created']).isoformat()
@@ -31,11 +31,28 @@ def create_frame(record, message, context):
     if context.exists():
         ctx.update(context.collapse())
 
-    events = _parse_custom_events(record)
+    events = _parse_custom_events(record, include_all_extra)
     if events:
         frame.update(events)
 
     return frame
+
+
+def _parse_custom_events(record, include_all_extra):
+    default_keys = {
+        'args', 'asctime', 'created', 'exc_info', 'exc_text', 'filename',
+        'funcName', 'levelname', 'levelno', 'lineno', 'module', 'msecs',
+        'message', 'msg', 'name', 'pathname', 'process', 'processName',
+        'relativeCreated', 'thread', 'threadName'
+    }
+    events = {}
+    for key, val in record.__dict__.items():
+        if key in default_keys:
+            continue
+        if not include_all_extra and not isinstance(val, dict):
+            continue
+        events[key] = val
+    return events
 
 
 def _levelname(level):
@@ -46,17 +63,3 @@ def _levelname(level):
         'error': 'error',
         'critical': 'critical',
     }[level.lower()]
-
-
-def _parse_custom_events(record):
-    default_keys = {
-        'args', 'asctime', 'created', 'exc_info', 'exc_text', 'filename',
-        'funcName', 'levelname', 'levelno', 'lineno', 'module', 'msecs',
-        'message', 'msg', 'name', 'pathname', 'process', 'processName',
-        'relativeCreated', 'thread', 'threadName'
-    }
-    events = {}
-    for key, val in record.__dict__.items():
-        if key not in default_keys and isinstance(val, dict):
-            events[key] = val
-    return events
