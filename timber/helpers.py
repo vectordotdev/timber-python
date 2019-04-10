@@ -40,3 +40,6 @@ class TimberContext(object):
             for name, data in contexts.items():
                 x.setdefault(name, {}).update(data)
         return x
+
+
+DEFAULT_CONTEXT = TimberContext()

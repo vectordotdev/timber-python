@@ -86,7 +86,6 @@ class TestFlushWorker(unittest2.TestCase):
     @mock.patch('timber.flusher._calculate_time_remaining')
     @mock.patch('timber.flusher._initial_time_remaining')
     def test_does_nothing_without_any_items(self, initial_time_remaining, calculate_time_remaining):
-        print(self)
         calculate_time_remaining.side_effect = lambda a,b: 0.0
         initial_time_remaining.side_effect = lambda a: 0.0001
 

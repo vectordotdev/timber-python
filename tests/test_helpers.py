@@ -56,5 +56,3 @@ class TestTimberContext(unittest2.TestCase):
             )
 
         self.assertEqual(c.collapse(), {})
-
-

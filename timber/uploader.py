@@ -1,6 +1,5 @@
 # coding: utf-8
 from __future__ import print_function, unicode_literals
-import base64
 import msgpack
 import requests
 

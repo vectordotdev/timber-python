@@ -1,16 +1,17 @@
 # coding: utf-8
 from __future__ import print_function, unicode_literals
+import msgpack
 from datetime import datetime
 
 
-def create_log_entry(handler, record):
+def create_frame(record, message, context, include_all_extra=False):
     r = record.__dict__
-    entry = {}
-    entry['dt'] = datetime.utcfromtimestamp(r['created']).isoformat()
-    entry['level'] = level = _levelname(r['levelname'])
-    entry['severity'] = int(r['levelno'] / 10)
-    entry['message'] = handler.format(record)
-    entry['context'] = ctx = {}
+    frame = {}
+    frame['dt'] = datetime.utcfromtimestamp(r['created']).isoformat()
+    frame['level'] = level = _levelname(r['levelname'])
+    frame['severity'] = int(r['levelno'] / 10)
+    frame['message'] = message
+    frame['context'] = ctx = {}
 
     # Runtime context
     ctx['runtime'] = runtime = {}
@@ -27,14 +28,31 @@ def create_log_entry(handler, record):
     system['process_name'] = r['processName']
 
     # Custom context
-    if handler.context.exists():
-        ctx.update(handler.context.collapse())
+    if context.exists():
+        ctx.update(context.collapse())
 
-    events = _parse_custom_events(record)
+    events = _parse_custom_events(record, include_all_extra)
     if events:
-        entry.update(events)
+        frame.update(events)
 
-    return entry
+    return frame
+
+
+def _parse_custom_events(record, include_all_extra):
+    default_keys = {
+        'args', 'asctime', 'created', 'exc_info', 'exc_text', 'filename',
+        'funcName', 'levelname', 'levelno', 'lineno', 'module', 'msecs',
+        'message', 'msg', 'name', 'pathname', 'process', 'processName',
+        'relativeCreated', 'thread', 'threadName'
+    }
+    events = {}
+    for key, val in record.__dict__.items():
+        if key in default_keys:
+            continue
+        if not include_all_extra and not isinstance(val, dict):
+            continue
+        events[key] = val
+    return events
 
 
 def _levelname(level):
@@ -45,17 +63,3 @@ def _levelname(level):
         'error': 'error',
         'critical': 'critical',
     }[level.lower()]
-
-
-def _parse_custom_events(record):
-    default_keys = {
-        'args', 'asctime', 'created', 'exc_info', 'exc_text', 'filename',
-        'funcName', 'levelname', 'levelno', 'lineno', 'module', 'msecs',
-        'message', 'msg', 'name', 'pathname', 'process', 'processName',
-        'relativeCreated', 'thread', 'threadName'
-    }
-    events = {}
-    for key, val in record.__dict__.items():
-        if key not in default_keys and isinstance(val, dict):
-            events[key] = val
-    return events
