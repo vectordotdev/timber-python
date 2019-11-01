@@ -30,7 +30,7 @@ class TestTimberHandler(unittest2.TestCase):
             buffer_capacity=buffer_capacity,
             flush_interval=flush_interval
         )
-        self.assertEqual(handler.pipe._maxsize, buffer_capacity)
+        self.assertEqual(handler.pipe.maxsize, buffer_capacity)
 
     @mock.patch('timber.handler.FlushWorker')
     def test_handler_creates_and_starts_worker_from_args(self, MockWorker):
